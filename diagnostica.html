@@ -2,81 +2,152 @@
 <html lang="it"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Ember Loop — diagnostica scanner</title>
+<title>Ember Loop — diagnostica</title>
 <style>
-:root{--bg:#0A0D13;--sur:#12171F;--line:#242C3A;--ink:#DFE5EF;--dim:#8B96A8;
- --ok:#5FBF7F;--bad:#E06A5A;--em:#F08A4B;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);
- font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px}
-h1{font-size:18px;margin:0 0 4px}.sub{color:var(--dim);font-size:13px;margin:0 0 18px}
-.r{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
-.r b{font-weight:400;color:var(--dim)}
-.v{font-family:var(--mono);font-size:13px;text-align:right}
-.si{color:var(--ok)}.no{color:var(--bad)}.em{color:var(--em)}
-button{width:100%;padding:15px;margin:16px 0 8px;border-radius:6px;border:1px solid var(--em);
- background:#2A1710;color:var(--em);font-family:var(--mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+:root{--bg:#0A0D13;--line:#242C3A;--ink:#DFE5EF;--dim:#8B96A8;
+ --ok:#5FBF7F;--bad:#E06A5A;--em:#F08A4B;--mono:ui-monospace,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#0A0D13;color:#DFE5EF;padding:16px;
+ font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+h1{font-size:18px;margin:0 0 4px}
+.sub{color:#8B96A8;font-size:13px;margin:0 0 16px}
+.r{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #242C3A;font-size:14px}
+.r b{font-weight:400;color:#8B96A8}
+.v{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;text-align:right;word-break:break-all}
+.si{color:#5FBF7F}.no{color:#E06A5A}.em{color:#F08A4B}
+button{-webkit-appearance:none;width:100%;padding:16px;margin:16px 0 8px;border-radius:6px;
+ border:1px solid #F08A4B;background:#2A1710;color:#F08A4B;
+ font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.12em;text-transform:uppercase}
 video{width:100%;border-radius:6px;background:#000;display:none;margin-top:8px}
-#esito{font-family:var(--mono);font-size:15px;padding:14px;border-radius:6px;border:1px dashed var(--line);
- margin-top:12px;color:var(--dim);white-space:pre-wrap}
+#esito{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;padding:14px;border-radius:6px;
+ border:1px dashed #242C3A;margin-top:12px;color:#8B96A8;white-space:pre-wrap;word-break:break-word}
+#boom{display:none;background:#2A1010;border:1px solid #E06A5A;color:#E06A5A;padding:12px;border-radius:6px;
+ margin:12px 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:pre-wrap}
 </style></head><body>
+
 <h1>Diagnostica scanner</h1>
-<p class="sub">Apri questa pagina dal telefono, sullo stesso indirizzo dell'app.</p>
+<p class="sub">Ember Loop &middot; apri dal telefono, stesso indirizzo dell'app</p>
+<div id="boom"></div>
 <div id="tab"></div>
-<button id="go">Avvia prova fotocamera</button>
-<video id="v" playsinline muted></video>
-<div id="esito">In attesa.</div>
+<button id="go" type="button">Avvia prova fotocamera</button>
+<video id="v" playsinline webkit-playsinline muted></video>
+<div id="esito">Premi il bottone.</div>
+
 <script src="jsQR.min.js"></script>
 <script>
-const tab = document.getElementById('tab'), esito = document.getElementById('esito');
-const riga = (k, v, cls) => { const d = document.createElement('div'); d.className = 'r';
-  d.innerHTML = '<b>' + k + '</b><span class="v ' + (cls||'') + '">' + v + '</span>'; tab.append(d); };
-
-riga('Indirizzo', location.protocol + '//' + location.host, location.protocol === 'https:' ? 'si' : 'em');
-riga('Contesto sicuro', window.isSecureContext ? 'si' : 'NO — niente fotocamera', window.isSecureContext ? 'si' : 'no');
-riga('jsQR caricato', typeof jsQR === 'function' ? 'si' : 'NO — manca jsQR.min.js', typeof jsQR === 'function' ? 'si' : 'no');
-riga('mediaDevices', navigator.mediaDevices ? 'si' : 'NO', navigator.mediaDevices ? 'si' : 'no');
-riga('Browser', navigator.userAgent.slice(0, 42) + '…');
-
-document.getElementById('go').onclick = async () => {
-  const v = document.getElementById('v');
-  esito.textContent = 'Chiedo il permesso…';
-  let st;
-  try {
-    st = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } });
-  } catch (e) {
-    esito.innerHTML = '<span class="no">Fotocamera negata: ' + e.name + '</span>\n' + (e.message || '');
-    return;
+/* Niente sintassi moderna, niente arrow function, niente async/await:
+   se il browser non riesce a INTERPRETARE questo blocco, il bottone resta
+   morto e non si capisce perche'. Cosi' funziona ovunque. */
+(function () {
+  var boom = document.getElementById('boom');
+  function esplodi(msg) {
+    boom.style.display = 'block';
+    boom.textContent = (boom.textContent ? boom.textContent + '\n' : '') + msg;
   }
-  v.srcObject = st; v.style.display = 'block'; await v.play();
-  const t = st.getVideoTracks()[0], s = t.getSettings ? t.getSettings() : {};
-  riga('Risoluzione reale', (s.width || v.videoWidth) + '×' + (s.height || v.videoHeight), 'si');
-  riga('Fotocamera usata', s.facingMode || t.label.slice(0, 26) || '?', 'si');
+  window.onerror = function (m, f, l) { esplodi('ERRORE JS: ' + m + '  (riga ' + l + ')'); };
+  window.addEventListener('unhandledrejection', function (e) {
+    esplodi('PROMESSA RIFIUTATA: ' + ((e.reason && (e.reason.name + ': ' + e.reason.message)) || e.reason));
+  });
 
-  const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
-  let n = 0, t0 = Date.now();
-  const cerca = (sx, sy, sw, sh, dw) => { const dh = Math.round(sh * dw / sw);
-    cv.width = dw; cv.height = dh; cx.drawImage(v, sx, sy, sw, sh, 0, 0, dw, dh);
-    const d = cx.getImageData(0, 0, dw, dh);
-    return typeof jsQR === 'function' ? jsQR(d.data, dw, dh, { inversionAttempts: 'attemptBoth' }) : null; };
-  (function loop() {
-    if (v.readyState === v.HAVE_ENOUGH_DATA && v.videoWidth) {
-      n++;
-      const W = v.videoWidth, H = v.videoHeight;
-      let r = cerca(0, 0, W, H, Math.min(800, W)), via = 'fotogramma intero';
-      if (!r) { const l = Math.round(Math.min(W, H) * 0.72);
-        r = cerca(Math.round((W - l) / 2), Math.round((H - l) / 2), l, l, Math.min(800, l)); via = 'ritaglio centrale'; }
-      if (r && r.data) {
-        st.getTracks().forEach(x => x.stop()); v.style.display = 'none';
-        esito.innerHTML = '<span class="si">LETTO: ' + r.data + '</span>\n' +
-          'trovato con: ' + via + '\ndopo ' + n + ' fotogrammi, ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s\n' +
-          'risoluzione ' + W + '×' + H;
-        return;
+  var tab = document.getElementById('tab');
+  var esito = document.getElementById('esito');
+  var v = document.getElementById('v');
+  var passo = 0;
+
+  function riga(k, val, cls) {
+    var d = document.createElement('div'); d.className = 'r';
+    var b = document.createElement('b'); b.textContent = k;
+    var s = document.createElement('span'); s.className = 'v ' + (cls || ''); s.textContent = val;
+    d.appendChild(b); d.appendChild(s); tab.appendChild(d);
+  }
+
+  var haQR = (typeof jsQR === 'function');
+  riga('Indirizzo', location.protocol + '//' + location.host, location.protocol === 'https:' ? 'si' : 'em');
+  riga('Contesto sicuro', window.isSecureContext ? 'si' : 'NO', window.isSecureContext ? 'si' : 'no');
+  riga('jsQR caricato', haQR ? 'si' : 'NO - manca jsQR.min.js', haQR ? 'si' : 'no');
+  riga('mediaDevices', (navigator.mediaDevices ? 'si' : 'NO'), navigator.mediaDevices ? 'si' : 'no');
+  riga('Browser', navigator.userAgent.slice(0, 40));
+  passo = 1;
+
+  var cv = document.createElement('canvas');
+  var cx = cv.getContext('2d');
+  var n = 0, t0 = 0, stream = null;
+
+  function cerca(sx, sy, sw, sh, dw) {
+    if (!haQR) return null;
+    var dh = Math.round(sh * dw / sw);
+    cv.width = dw; cv.height = dh;
+    cx.drawImage(v, sx, sy, sw, sh, 0, 0, dw, dh);
+    var d = cx.getImageData(0, 0, dw, dh);
+    return jsQR(d.data, dw, dh, { inversionAttempts: 'attemptBoth' });
+  }
+
+  function loop() {
+    try {
+      if (v.readyState === 4 && v.videoWidth) {
+        n++;
+        var W = v.videoWidth, H = v.videoHeight;
+        var via = 'intero';
+        var r = cerca(0, 0, W, H, Math.min(800, W));
+        if (!r) {
+          var l = Math.round(Math.min(W, H) * 0.72);
+          r = cerca(Math.round((W - l) / 2), Math.round((H - l) / 2), l, l, Math.min(800, l));
+          via = 'ritaglio centrale';
+        }
+        if (r && r.data) {
+          if (stream) { var t = stream.getTracks(); for (var i = 0; i < t.length; i++) t[i].stop(); }
+          v.style.display = 'none';
+          esito.textContent = 'LETTO: ' + r.data + '\nvia ' + via +
+            '\ndopo ' + n + ' fotogrammi, ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s' +
+            '\nrisoluzione ' + W + 'x' + H;
+          esito.style.color = '#5FBF7F'; esito.style.borderColor = '#5FBF7F';
+          return;
+        }
+        if (n % 10 === 0) {
+          esito.textContent = 'Cerco... ' + n + ' fotogrammi a ' + W + 'x' + H +
+            '\nSe non trova nulla: avvicina il sigillo, piu’ luce,\nevita i riflessi (meglio la carta dello schermo).';
+        }
+      } else if (n === 0) {
+        esito.textContent = 'Video in avvio... readyState=' + v.readyState + ' w=' + v.videoWidth;
       }
-      if (n % 10 === 0) esito.textContent = 'Cerco… ' + n + ' fotogrammi analizzati a ' + W + '×' + H +
-        '\n(se non trova nulla: avvicina, illumina, evita riflessi sullo schermo)';
-    }
+    } catch (e) { esplodi('ERRORE nel ciclo: ' + e.name + ': ' + e.message); return; }
     requestAnimationFrame(loop);
-  })();
-};
+  }
+
+  function avvia() {
+    esito.style.color = ''; esito.style.borderColor = '';
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      esito.textContent = 'Questo browser non espone mediaDevices.getUserMedia.\n' +
+        (window.isSecureContext ? 'Il contesto e’ sicuro, quindi e’ il browser.'
+                                : 'Causa quasi certa: la pagina non e’ in https.');
+      return;
+    }
+    esito.textContent = 'Chiedo il permesso alla fotocamera...';
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    }).then(function (s) {
+      stream = s; v.srcObject = s; v.style.display = 'block';
+      var tr = s.getVideoTracks()[0];
+      var st = (tr && tr.getSettings) ? tr.getSettings() : {};
+      riga('Risoluzione', (st.width || '?') + 'x' + (st.height || '?'), 'si');
+      riga('Fotocamera', st.facingMode || (tr && tr.label ? tr.label.slice(0, 24) : '?'), 'si');
+      t0 = Date.now();
+      var p = v.play();
+      if (p && p.then) p.then(function () { loop(); })['catch'](function (e) {
+        esplodi('video.play() rifiutato: ' + e.name + ': ' + e.message); loop();
+      });
+      else loop();
+    })['catch'](function (e) {
+      esito.textContent = 'FOTOCAMERA NEGATA\n' + e.name + '\n' + (e.message || '');
+      esito.style.color = '#E06A5A'; esito.style.borderColor = '#E06A5A';
+    });
+  }
+
+  var go = document.getElementById('go');
+  go.addEventListener('click', function () {
+    try { avvia(); } catch (e) { esplodi('ERRORE all’avvio: ' + e.name + ': ' + e.message); }
+  }, false);
+  passo = 2;
+  riga('Script caricato', 'si, fino in fondo (passo ' + passo + ')', 'si');
+})();
 </script></body></html>
