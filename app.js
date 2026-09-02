@@ -81,7 +81,7 @@ const Cam = {
     const v = box.querySelector('video'), cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    } catch (e) { return false; }
+    } catch (e) { this.errore = (e && e.name) || 'errore'; return false; }
     v.srcObject = this.stream; v.setAttribute('playsinline', ''); v.muted = true; await v.play();
     box.style.display = 'block';
     const tick = () => {
@@ -90,7 +90,7 @@ const Cam = {
         cv.width = w; cv.height = v.videoHeight * sc;
         cx.drawImage(v, 0, 0, cv.width, cv.height);
         const d = cx.getImageData(0, 0, cv.width, cv.height);
-        const r = window.jsQR && jsQR(d.data, d.width, d.height, { inversionAttempts: 'dontInvert' });
+        const r = jsQR(d.data, d.width, d.height, { inversionAttempts: 'attemptBoth' });
         if (r && r.data) { this.stop(box); onCode(r.data.trim().toUpperCase()); return; }
       }
       this.raf = requestAnimationFrame(tick);
@@ -107,10 +107,31 @@ function scanner(onCode) {
   const box = el('div', { id: 'cam' }, el('video', { playsinline: '' }),
     el('div', { class: 'ret' }), el('div', { class: 'cap' }, 'inquadra il sigillo'));
   const b = el('button', { class: 'big', type: 'button', onclick: async () => {
+      if (typeof jsQR !== 'function') {
+        b.textContent = '✕  Decodificatore QR non caricato';
+        b.style.borderColor = 'var(--bad)'; b.style.color = 'var(--bad)';
+        box.insertAdjacentElement('beforebegin', el('p', { class: 'err' },
+          'Manca jsQR.min.js accanto alla pagina. Usa il codice scritto sotto il sigillo.'));
+        return;
+      }
       if (Cam.stream) { Cam.stop(box); b.textContent = '⌘  Scansiona sigillo'; return; }
       b.textContent = 'Avvio fotocamera…';
-      const ok = await Cam.start(box, c => { b.textContent = '⌘  Scansiona sigillo'; onCode(c); });
-      b.textContent = ok ? '✕  Chiudi fotocamera' : 'Fotocamera non disponibile — usa il codice';
+      // il primo fotogramma puo' contenere gia' il codice: in quel caso start()
+      // ritorna DOPO il callback, e non dobbiamo riscrivere l'etichetta.
+      let letto = false;
+      const ok = await Cam.start(box, c => { letto = true; b.textContent = '⌘  Scansiona sigillo'; onCode(c); });
+      if (letto) {
+        // il codice e' stato letto sul primo fotogramma: il callback ha gia' sistemato tutto
+      } else if (ok) {
+        b.textContent = '✕  Chiudi fotocamera';
+      } else {
+        const perche = Cam.errore === 'NotAllowedError' ? 'permesso negato'
+          : Cam.errore === 'NotFoundError' ? 'nessuna fotocamera'
+          : !window.isSecureContext ? 'serve https (o localhost)'
+          : (Cam.errore || 'non disponibile');
+        b.textContent = '✕  Fotocamera: ' + perche;
+        b.style.borderColor = 'var(--bad)'; b.style.color = 'var(--bad)';
+      }
     } }, '⌘  Scansiona sigillo');
   return [b, box];
 }
