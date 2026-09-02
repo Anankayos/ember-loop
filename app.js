@@ -84,9 +84,18 @@ const Cam = {
         video: { facingMode: { ideal: 'environment' },
                  width: { ideal: 1280 }, height: { ideal: 720 } } });
     } catch (e) { this.errore = (e && e.name) || 'errore'; return false; }
-    v.srcObject = this.stream; v.setAttribute('playsinline', ''); v.muted = true; await v.play();
+
+    // ORDINE CRITICO PER iOS: il contenitore va reso visibile PRIMA di play().
+    // Safari non riproduce un video dentro un elemento display:none, quindi
+    // videoWidth resterebbe 0 e il ciclo di scansione girerebbe a vuoto.
     box.style.display = 'block';
-    let frame = 0;
+    v.setAttribute('playsinline', '');
+    v.setAttribute('webkit-playsinline', '');
+    v.muted = true; v.defaultMuted = true;
+    v.srcObject = this.stream;
+    try { await v.play(); }
+    catch (e) { this.errore = 'play:' + ((e && e.name) || 'rifiutato'); this.stop(box); return false; }
+    let frame = 0, muti = 0;
     const cerca = (sx, sy, sw, sh, dw) => {
       const dh = Math.round(sh * dw / sw);
       cv.width = dw; cv.height = dh;
@@ -109,6 +118,12 @@ const Cam = {
         const cap = box.querySelector('.cap');
         if (cap && frame % 8 === 0) cap.textContent = 'cerco un sigillo… ' + frame + ' fotogrammi';
         if (r && r.data) { this.stop(box); onCode(r.data.trim().toUpperCase()); return; }
+      } else {
+        // il video non sta producendo fotogrammi: dopo qualche secondo avvisa,
+        // invece di restare in silenzio come faceva prima.
+        muti++;
+        const cap = box.querySelector('.cap');
+        if (cap && muti === 120) cap.textContent = 'il video non parte (readyState ' + v.readyState + ')';
       }
       this.raf = requestAnimationFrame(tick);
     };
