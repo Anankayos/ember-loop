@@ -243,7 +243,10 @@ function mostraTesto(out, t) {
     const kIn = el('input', { type: 'text', class: 'k-in', placeholder: 'parola chiave', autocapitalize: 'characters' });
     const fb = el('p', { class: 'hint' }, 'Ogni tentativo costa 1d4+1 minuti, giusto o sbagliato. Il Consultatore puo\u2019 farti risparmiare.');
     const tenta = () => {
-      const k = kIn.value.trim(); if (!k) return;
+      const k = kIn.value.trim();
+      if (!k) { fb.className = 'err';
+        fb.textContent = '⚠ Scrivi la chiave. Te la d\u00e0 il Consultatore, cercando nel diario una parola trovata in un testo.';
+        kIn.focus(); return; }
       const costo = d4p1();
       const p = prova(t.cifra, k);
       segna('tentativo', t.sigillo + ' · ' + (p ? 'riuscito' : 'a vuoto'), costo);
@@ -313,7 +316,9 @@ V.log = () => {
 
   const chiedi = parola => {
     const p = parola.trim().toUpperCase();
-    if (!p) return;
+    if (!p) { fb.className = 'err';
+      fb.textContent = '⚠ Scrivi una parola. Sono quelle che il Decifratore legge ad alta voce dopo aver aperto un testo comune.';
+      wIn.focus(); return; }
     const L = D.log.find(x => x.parola === p);
     const costo = COSTO.consulta;
     segna('consulta', p + (L ? ' · trovata' : ' · nulla'), costo);
@@ -510,7 +515,7 @@ V.master = () => {
       (() => {
         const n = el('input', { type: 'text', inputmode: 'numeric', placeholder: 'minuti', style: 'text-align:center' });
         const go = () => { const v = parseInt(n.value, 10);
-          if (!v || v < 1) return;
+          if (!v || v < 1) { roll.textContent = 'scrivi un numero di minuti (es. 3)'; n.focus(); return; }
           M.storia.push(v); M.min = Math.max(0, M.min - v);
           roll.textContent = 'riportato dal tavolo \u2212' + v + ' min'; n.value = ''; dipingi(); };
         n.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
