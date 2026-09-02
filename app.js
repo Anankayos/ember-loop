@@ -10,10 +10,16 @@ const clear = n => { while (n.firstChild) n.removeChild(n.firstChild); };
 
 /* ---------------- stato locale (per dispositivo) ---------------- */
 const SK = 'emberloop.v1';
-let S = { testi: [], log: [], stanze: [], mecc: [], plain: {} };
+let S = { testi: [], log: [], stanze: [], mecc: [], plain: {}, storico: [] };
 try { Object.assign(S, JSON.parse(localStorage.getItem(SK) || '{}')); } catch (e) {}
 const save = () => { try { localStorage.setItem(SK, JSON.stringify(S)); } catch (e) {} };
 const add = (k, v) => { if (!S[k].includes(v)) { S[k].push(v); save(); } };
+/** Registra un'azione nello storico locale, con il suo costo in minuti. */
+function segna(tipo, cosa, minuti) {
+  S.storico = S.storico || [];
+  S.storico.push({ t: tipo, c: cosa, m: minuti, q: new Date().toISOString().slice(11, 16) });
+  save();
+}
 
 /* ---------------- decifratura ---------------- */
 const MARCA = '\u25c6KINDLER\u00b7ARCHIVIO\u00b7v1\u25c6\n';
@@ -26,6 +32,36 @@ function decifra(b64, chiave) {
   return t.slice(MARCA.length);
 }
 const prova = (b64, k) => { try { return decifra(b64, k); } catch (e) { return null; } };
+
+/* ---------------- Cesare + riconoscimento italiano ---------------- */
+const AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function cesare(t, sc) {
+  let o = '';
+  for (const ch of t) { const u = ch.toUpperCase(); const i = AZ.indexOf(u);
+    if (i < 0) { o += ch; continue; }
+    const n = AZ[(i + sc % 26 + 26) % 26]; o += (ch === u ? n : n.toLowerCase()); }
+  return o;
+}
+const COMUNI = [' di ',' che ',' la ',' il ',' e ',' non ',' per ',' una ',' del ',' con ',
+                ' si ',' in ',' un ',' le ',' ci ',' era ',' come ',' della ',' nel ',' piu'];
+function punteggioItaliano(t) {
+  const s = ' ' + t.toLowerCase() + ' '; let n = 0;
+  for (const w of COMUNI) { let i = 0; while ((i = s.indexOf(w, i)) >= 0) { n++; i++; } }
+  return n;
+}
+/** Prova tutti i 25 scorrimenti e tiene quello che somiglia di piu' all'italiano. */
+function craccaCesare(testoCifrato) {
+  let best = null, bestSc = 0, bestP = -1;
+  for (let sc = 1; sc <= 25; sc++) {
+    const p = cesare(testoCifrato, -sc), q = punteggioItaliano(p);
+    if (q > bestP) { bestP = q; best = p; bestSc = sc; }
+  }
+  return { testo: best, scorrimento: bestSc, punteggio: bestP };
+}
+
+/* ---------------- costi in minuti ---------------- */
+const COSTO = { crack: 1, consulta: 1, tentativo: null };  // null = tira 1d4+1
+const d4p1 = () => 1 + Math.floor(Math.random() * 4) + 1;
 
 /* ---------------- glifi Kindler (deterministici dal sigillo) ---------------- */
 const GL = '▲▼◆◇○●□■△▽◁▷◀▶┌┐└┘├┤┬┴┼─│╱╲╳⌐¬±∴∵≈≠≡⊂⊃⊕⊗⌂'.split('');
@@ -106,8 +142,7 @@ V.decifra = () => {
   vt.textContent = 'Decifratore'; vs.textContent = 'Software di decifrazione testi';
   clear(app);
   const out = el('div');
-  const codeIn = el('input', { type: 'text', placeholder: 'KNDL-01', inputmode: 'text', autocapitalize: 'characters' });
-  const msg = el('p', { class: 'hint' }, 'Scansiona il sigillo sul foglio, oppure digita il codice stampato sotto di esso.');
+  const codeIn = el('input', { type: 'text', placeholder: 'KNDL-01', autocapitalize: 'characters' });
   const apri = code => {
     const t = D.testi.find(x => x.sigillo.toUpperCase() === code);
     if (!t) { clear(out); out.append(el('p', { class: 'err' }, '⚠ Sigillo non riconosciuto: ' + code)); return; }
@@ -119,7 +154,7 @@ V.decifra = () => {
       el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Codice sigillo'), codeIn),
       el('button', { class: 'big ghost', type: 'button', style: 'margin-top:12px',
         onclick: () => apri(codeIn.value.trim().toUpperCase()) }, 'Apri reperto'),
-      msg),
+      el('p', { class: 'hint' }, 'Se la fotocamera non parte, digita il codice stampato sotto il sigillo.')),
     out);
 };
 
@@ -127,32 +162,66 @@ function mostraTesto(out, t) {
   clear(out);
   const pia = D.pianeti.find(p => p.id === t.pianeta);
   const box = el('div', { class: 'card' });
-  box.append(el('div', { class: 'eyebrow' }, t.sigillo + (pia ? ' · ' + pia.sub : ' · registrazione terminale')),
+  box.append(el('div', { class: 'eyebrow' }, t.sigillo + ' · ' + (pia ? pia.sub : 'registrazione terminale')),
     el('h3', { style: 'margin:6px 0 12px;font-size:19px' }, t.titolo));
-  if (S.testi.includes(t.id)) { rivela(box, t); out.append(box); return; }
-  box.append(el('div', { class: 'glyphs' }, glifi(t.sigillo, 130)));
-  const kIn = el('input', { type: 'text', class: 'k-in', placeholder: 'chiave', autocapitalize: 'characters' });
-  const fb = el('p', { class: 'hint' }, 'La chiave si trova nel diario di bordo o dietro un enigma.');
-  const tenta = () => {
-    const k = kIn.value.trim();
-    if (!k) return;
-    const p = prova(t.cifra, k);
-    if (p) { S.plain[t.id] = p; add('testi', t.id); save(); rivela(box, t, true); }
-    else { fb.className = 'err'; fb.textContent = '⚠ La chiave non tiene. Il testo resta illeggibile.'; kIn.value = ''; }
-  };
-  kIn.addEventListener('keydown', e => { if (e.key === 'Enter') tenta(); });
-  box.append(el('label', { class: 'fld', style: 'margin-top:14px' }, el('span', { class: 'lbl' }, 'Chiave di decifrazione'), kIn),
-    el('button', { class: 'big k-go', type: 'button', style: 'margin-top:12px', onclick: tenta }, 'Decifra'), fb);
+
+  if (S.plain[t.id]) { rivela(box, t); out.append(box); return; }
+
+  if (t.tipo === 'comune') {
+    /* ---- Cesare: il software lo rompe da solo ---- */
+    box.append(el('div', { class: 'eyebrow', style: 'color:var(--cold);margin-bottom:8px' },
+        'Cifratura semplice · a scorrimento'),
+      el('div', { class: 'glyphs', style: 'letter-spacing:.05em;font-size:14px' }, t.cesare.slice(0, 420)));
+    const esito = el('p', { class: 'hint' }, 'Il software prova tutti e 25 gli scorrimenti. Costa 1 minuto.');
+    box.append(el('button', { class: 'big crack-go', type: 'button', style: 'margin-top:14px', onclick: () => {
+        const r = craccaCesare(t.cesare);
+        S.plain[t.id] = r.testo; add('testi', t.id); save();
+        segna('crack', t.sigillo, COSTO.crack);
+        rivela(box, t, true, r.scorrimento);
+      } }, '⟳  Crack automatico  ·  1 min'), esito);
+  } else {
+    /* ---- Vigenère: serve la parola esatta ---- */
+    box.append(el('div', { class: 'eyebrow', style: 'color:var(--ember);margin-bottom:8px' },
+        'Cifratura a chiave · la forza bruta non basta'),
+      el('div', { class: 'glyphs' }, glifi(t.sigillo, 120)));
+    const kIn = el('input', { type: 'text', class: 'k-in', placeholder: 'parola chiave', autocapitalize: 'characters' });
+    const fb = el('p', { class: 'hint' }, 'Ogni tentativo costa 1d4+1 minuti, giusto o sbagliato. Il Consultatore puo\u2019 farti risparmiare.');
+    const tenta = () => {
+      const k = kIn.value.trim(); if (!k) return;
+      const costo = d4p1();
+      const p = prova(t.cifra, k);
+      segna('tentativo', t.sigillo + ' · ' + (p ? 'riuscito' : 'a vuoto'), costo);
+      if (p) { S.plain[t.id] = p; add('testi', t.id); save(); rivela(box, t, true); }
+      else { fb.className = 'err';
+        fb.textContent = '⚠ La chiave non tiene. Persi ' + costo + ' minuti.'; kIn.value = ''; }
+    };
+    kIn.addEventListener('keydown', e => { if (e.key === 'Enter') tenta(); });
+    box.append(el('label', { class: 'fld', style: 'margin-top:14px' },
+        el('span', { class: 'lbl' }, 'Chiave di decifrazione'), kIn),
+      el('button', { class: 'big k-go', type: 'button', style: 'margin-top:12px', onclick: tenta },
+        'Decifra  ·  1d4+1 min'), fb);
+  }
   out.append(box);
 }
-function rivela(box, t, anim) {
+
+function rivela(box, t, anim, scorrimento) {
   clear(box);
   const pia = D.pianeti.find(p => p.id === t.pianeta);
   box.className = 'card acc';
-  box.append(el('div', { class: 'eyebrow', style: 'color:var(--ember)' }, t.sigillo + ' \u00b7 decifrato'),
+  box.append(el('div', { class: 'eyebrow', style: 'color:var(--ember)' },
+      t.sigillo + ' · decifrato' + (scorrimento ? ' · scorrimento ' + scorrimento : '')),
     el('h3', { style: 'margin:6px 0 12px;font-size:19px' }, t.titolo),
     el('div', { class: 'plain' + (anim ? ' rev' : '') }, S.plain[t.id] || ''));
-  if (pia) {
+
+  if (t.tipo === 'comune' && t.parole && t.parole.length) {
+    const w = el('div', { class: 'card cold', style: 'margin:16px 0 0' },
+      el('div', { class: 'eyebrow', style: 'color:var(--cold)' }, 'Parole da passare al Consultatore'),
+      el('p', { style: 'margin:6px 0 10px;font-size:13.5px;color:var(--dim)' },
+        'Leggile ad alta voce. Lui le digita nel diario di bordo per ottenere gli indizi.'));
+    t.parole.forEach(p => w.append(el('span', { class: 'chip on', style: 'font-size:13px;padding:6px 12px' }, p)));
+    box.append(w);
+  }
+  if (pia && t.tipo === 'chiave') {
     const nuova = !S.mecc.includes(pia.meccanica);
     if (nuova) add('mecc', pia.meccanica);
     box.append(el('div', { class: 'card cold', style: 'margin:16px 0 0' },
@@ -164,35 +233,52 @@ function rivela(box, t, anim) {
 
 /* ---- 02 · CONSULTATORE DEL LOG ---- */
 V.log = () => {
-  vt.textContent = 'Consultatore'; vs.textContent = 'Diario di bordo · archivio indizi';
+  vt.textContent = 'Consultatore'; vs.textContent = 'Diario di bordo · interrogazione per parola';
   clear(app);
-  const lista = el('div');
-  const disegna = () => { clear(lista);
+  const lista = el('div'), cont = el('div', { class: 'eyebrow', style: 'margin:22px 0 10px' });
+  const fb = el('p', { class: 'hint' },
+    'Il Decifratore ti legge le parole trovate nei testi. Digitane una: se l\u2019archivio la conosce, restituisce un indizio. Costa 1 minuto.');
+
+  const disegna = () => {
+    clear(lista);
     D.log.forEach(L => {
       const ap = S.log.includes(L.id);
       const it = el('div', { class: 'item' + (ap ? '' : ' lock') });
-      it.append(el('div', { class: 'meta' }, L.sigillo + ' · ' + (D.pianeti.find(p => p.id === L.pianeta) || {}).sub),
-        el('h4', {}, ap ? L.titolo : 'Voce sigillata'));
-      if (ap) { it.append(el('div', { class: 'body' }, L.corpo), el('div', { class: 'clue' }, '▸ ' + L.indizio)); }
-      else it.append(el('div', { class: 'body' }, 'Scansiona il sigillo corrispondente per sbloccare questa voce.'));
+      it.append(el('div', { class: 'meta' }, ap ? L.sigillo + ' · ' + L.parola : 'voce sigillata'),
+        el('h4', {}, ap ? L.titolo : '— — —'));
+      if (ap) {
+        it.append(el('div', { class: 'body' }, L.corpo));
+        if (L.indizio) it.append(el('div', { class: 'clue' }, '▸ ' + L.indizio));
+      } else it.append(el('div', { class: 'body' }, 'Serve la parola giusta.'));
       lista.append(it);
     });
-    cont.textContent = S.log.length + ' / ' + D.log.length + ' voci sbloccate';
+    cont.textContent = S.log.length + ' / ' + D.log.length + ' voci aperte';
   };
-  const apri = code => {
-    const L = D.log.find(x => x.sigillo.toUpperCase() === code);
-    if (!L) { fb.className = 'err'; fb.textContent = '⚠ Sigillo non riconosciuto: ' + code; return; }
-    add('log', L.id); fb.className = 'ok'; fb.textContent = '✓ Sbloccata: ' + L.titolo; disegna();
+
+  const chiedi = parola => {
+    const p = parola.trim().toUpperCase();
+    if (!p) return;
+    const L = D.log.find(x => x.parola === p);
+    const costo = COSTO.consulta;
+    segna('consulta', p + (L ? ' · trovata' : ' · nulla'), costo);
+    if (!L) { fb.className = 'err';
+      fb.textContent = '⚠ L\u2019archivio non conosce «' + p + '». Persi ' + costo + ' minuto.'; return; }
+    if (S.log.includes(L.id)) { fb.className = 'hint';
+      fb.textContent = '«' + p + '» era gi\u00e0 stata usata: ' + L.titolo; disegna(); return; }
+    add('log', L.id); fb.className = 'ok';
+    fb.textContent = '✓ ' + L.titolo + ' — costo ' + costo + ' minuto'; disegna();
   };
-  const codeIn = el('input', { type: 'text', placeholder: 'LOG-01', autocapitalize: 'characters' });
-  const fb = el('p', { class: 'hint' }, 'Ogni voce sbloccata resta disponibile per tutta la serata.');
-  const cont = el('div', { class: 'eyebrow', style: 'margin:22px 0 10px' });
-  const [scanBtn, camBox] = scanner(apri);
-  app.append(scanBtn, camBox,
-    el('div', { class: 'card' },
-      el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Codice voce'), codeIn),
-      el('button', { class: 'big ghost', type: 'button', style: 'margin-top:12px',
-        onclick: () => apri(codeIn.value.trim().toUpperCase()) }, 'Sblocca voce'), fb),
+
+  const wIn = el('input', { type: 'text', placeholder: 'parola', autocapitalize: 'characters' });
+  wIn.addEventListener('keydown', e => { if (e.key === 'Enter') chiedi(wIn.value); });
+  app.append(
+    el('div', { class: 'card acc' },
+      el('div', { class: 'eyebrow', style: 'color:var(--ember)' }, 'Interroga l\u2019archivio'),
+      el('label', { class: 'fld', style: 'margin-top:10px' },
+        el('span', { class: 'lbl' }, 'Parola udita dal Decifratore'), wIn),
+      el('button', { class: 'big log-go', type: 'button', style: 'margin-top:12px',
+        onclick: () => chiedi(wIn.value) }, 'Cerca  ·  1 min'),
+      fb),
     cont, lista);
   disegna();
 };
@@ -201,7 +287,7 @@ V.log = () => {
 const PZ = {
  'S-P1': { rows:4, cols:4, start:[3,0], end:[0,3], dots:[],
    squares:[{r:0,c:0,k:'a'},{r:2,c:0,k:'a'},{r:0,c:2,k:'b'},{r:2,c:2,k:'b'}] },
- 'S-P2': { rows:5, cols:5, start:[4,0], end:[0,4], dots:[[3,1],[1,3]],
+ 'S-P2': { rows:5, cols:5, start:[4,0], end:[2,4], dots:[[2,2],[1,3]],
    squares:[{r:0,c:0,k:'a'},{r:1,c:1,k:'a'},{r:2,c:0,k:'a'},{r:3,c:1,k:'a'},
             {r:0,c:2,k:'b'},{r:1,c:3,k:'b'},{r:2,c:2,k:'b'},{r:3,c:3,k:'b'}] },
  'S-P3': { rows:5, cols:5, start:[4,2], end:[0,2], dots:[[2,0],[2,4]],
@@ -362,12 +448,42 @@ V.master = () => {
     el('div', { class: 'card cold' },
       el('div', { class: 'eyebrow', style: 'color:var(--cold)' }, 'Stato dei rilevatori su questo dispositivo'), stato),
     el('div', { class: 'card' },
+      el('div', { class: 'eyebrow' }, 'Costo riportato da un giocatore'),
+      el('p', { class: 'hint', style: 'margin:8px 0 10px' },
+        'Le app dei ruoli tirano da sole e dicono quanto e\u2019 costato. Scala qui il numero che ti riferiscono.'),
+      (() => {
+        const n = el('input', { type: 'text', inputmode: 'numeric', placeholder: 'minuti', style: 'text-align:center' });
+        const go = () => { const v = parseInt(n.value, 10);
+          if (!v || v < 1) return;
+          M.storia.push(v); M.min = Math.max(0, M.min - v);
+          roll.textContent = 'riportato dal tavolo \u2212' + v + ' min'; n.value = ''; dipingi(); };
+        n.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+        const w = el('div');
+        w.append(n, el('button', { class: 'big ghost', type: 'button', style: 'margin-top:10px', onclick: go }, 'Scala'));
+        return w;
+      })()),
+    el('div', { class: 'card' },
+      el('div', { class: 'eyebrow' }, 'Storico del loop'),
+      (() => {
+        const box = el('div', { style: 'margin-top:10px' });
+        const dis = () => { clear(box);
+          const st = (S.storico || []).slice(-12).reverse();
+          if (!st.length) { box.append(el('p', { class: 'hint', style: 'margin:0' },
+            'Nessuna azione registrata su questo dispositivo. Ogni app tiene il proprio storico.')); return; }
+          st.forEach(a => box.append(el('div', { style: 'display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px' },
+            el('span', { class: 'mono', style: 'color:var(--faint);flex:0 0 42px' }, a.q),
+            el('span', { style: 'flex:1;color:var(--dim)' }, a.c),
+            el('span', { class: 'mono', style: 'color:var(--ember)' }, '\u2212' + a.m))));
+        };
+        dis(); return box;
+      })()),
+    el('div', { class: 'card' },
       el('div', { class: 'eyebrow' }, 'Failsafe del narratore'),
       el('p', { class: 'hint', style: 'margin:8px 0 0' },
         'Se il gruppo si blocca, il tuo compito è far avanzare la trama: leggi tu il testo dal foglio chiavi e considera la stanza aperta. Le chiavi non sono in questa app di proposito — sono su CHIAVI-MASTER, stampato.'),
       el('button', { class: 'big ghost', type: 'button', style: 'margin-top:14px', onclick: () => {
           if (confirm('Azzerare tutti i progressi su QUESTO dispositivo?')) {
-            S = { testi: [], log: [], stanze: [], mecc: [], plain: {} }; save();
+            S = { testi: [], log: [], stanze: [], mecc: [], plain: {}, storico: [] }; save();
             M = { min: 30, loop: 1, storia: [] }; salvaM(); dipingi(); } } }, 'Azzera dispositivo')));
   dipingi();
 };

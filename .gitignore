@@ -16,3 +16,6 @@ push-log.txt
 diagnosi.txt
 diagnosi.ps1
 __pycache__/
+
+# copia temporanea servita in rete locale
+_serve/

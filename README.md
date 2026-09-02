@@ -38,10 +38,26 @@ funziona anche se il wifi cade a metà serata.
 
 ## Come si usa la sera
 
-1. Ognuno dei tre apre il link e sceglie il proprio ruolo. **Non serve coordinarsi:** ogni telefono tiene il proprio stato.
-2. Tu apri **Console di Sistema** su un quarto dispositivo.
-3. I 30 minuti sono un **budget**, non un cronometro. Ogni azione (spostamento, traduzione, consultazione, enigma) costa **1d4+1** minuti: premi il bottone corrispondente e la console tira e scala da sola.
-4. A zero: luce bianca. Premi **Nuovo loop** e si riparte da 30.
+Tre telefoni, tre ruoli. Il quarto dispositivo e' la tua Console.
+
+**Il ciclo che tiene insieme i ruoli:**
+
+1. Il **Decifratore** apre un testo *comune*. Il software lo cracca da solo (Cesare, 25 scorrimenti, 1 minuto) e gli mostra delle **parole evidenziate**.
+2. Le legge **ad alta voce**. E' il passaggio che rende i ruoli interdipendenti: l'app non le trasmette da sola.
+3. Il **Consultatore** le digita nel diario di bordo. Se l'archivio conosce quella parola, restituisce un **indizio** — che punta a una chiave di decifrazione oppure alla meccanica di un enigma porta.
+4. Il **Decifratore** usa quella chiave su un testo *chiave* (Vigenere: la forza bruta non basta). L'**Apritore** usa i suggerimenti sugli enigmi.
+
+**I costi in minuti, e perche' contano:**
+
+| Azione | Costo |
+|---|---|
+| Crack automatico di un testo comune | 1 min |
+| Interrogare il diario con una parola | 1 min |
+| Tentare una chiave (giusta o sbagliata) | **1d4+1** |
+
+Insistere da soli su una chiave costa in media 3,5 minuti a tentativo. Passare dagli altri due ne costa 2 in tutto. **La scorciatoia passa sempre dai compagni** — e' conveniente collaborare, non obbligatorio.
+
+**Lo storico.** Ogni app registra le proprie azioni con il costo. La Console mostra le ultime dodici e ha un campo per scalare a mano i minuti che i giocatori ti riferiscono.
 
 ## Verifiche già fatte
 

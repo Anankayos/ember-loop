@@ -1,3 +1,9 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0D13">
 <title>The Ember Loop — Terminale di Rilevamento</title>
 <style>
 :root{
@@ -116,7 +122,8 @@ label.fld .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color
 .chip.on{border-color:var(--ember);color:var(--ember);background:var(--ember-dk)}
 .hide{display:none!important}
 </style>
-
+</head>
+<body>
 <div class="wrap">
   <header>
     <div class="mark" aria-hidden="true"></div>
@@ -132,7 +139,7 @@ label.fld .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
 <script>
-// GENERATO DA contenuti.py — non modificare a mano
+// GENERATO DA costruisci.py — non modificare a mano
 window.DATI = {
  "pianeti": [
   {
@@ -140,8 +147,7 @@ window.DATI = {
    "nome": "Il Pianeta dell'Amicizia",
    "sub": "l'origine dei Kindler",
    "meccanica": "PORTARE",
-   "mecc_desc": "Puoi far attraversare al reset un solo oggetto fisico. Ciò che tieni in mano quando arriva la luce, resta in mano.",
-   "colore": "ember",
+   "mecc_desc": "Puoi far attraversare al reset un solo oggetto fisico. Cio' che tieni in mano quando arriva la luce, resta in mano.",
    "chiave_hash": "b0f4f4c9451f9129"
   },
   {
@@ -149,8 +155,7 @@ window.DATI = {
    "nome": "Il Pianeta della Sofferenza",
    "sub": "la divisione dei Kindler",
    "meccanica": "PERCEPIRE",
-   "mecc_desc": "Puoi percepire ciò che sta oltre lo zero. Per pochi secondi, dopo la luce, continui a sentire.",
-   "colore": "cold",
+   "mecc_desc": "Puoi percepire cio' che sta oltre lo zero. Per pochi secondi, dopo la luce, continui a sentire.",
    "chiave_hash": "311f42e04adc76a6"
   },
   {
@@ -159,109 +164,164 @@ window.DATI = {
    "sub": "la rinascita dei Kindler",
    "meccanica": "SCEGLIERE",
    "mecc_desc": "Puoi scegliere il minuto in cui ti svegli. Non accorci il loop: scegli dove entrarci.",
-   "colore": "warm",
    "chiave_hash": "4d178183a3cabb3e"
+  },
+  {
+   "id": "FIN",
+   "nome": "Il Cuore del Sistema",
+   "sub": "registrazione terminale",
+   "meccanica": "ACCESSO",
+   "mecc_desc": "Con le tre meccaniche resti oltre la luce e assisti all'accensione.",
+   "chiave_hash": "dda7f7007188815d"
   }
  ],
  "testi": [
   {
-   "id": "T-01",
-   "pianeta": "P1",
-   "titolo": "Prima registrazione",
-   "sigillo": "KNDL-01",
-   "cifra": "p9PPCAYCBQkBG4H4DRMGDAAVBgOD8jJ4odjKSxUhO2M8KShlNiY3LjYoKiogYyslNywgLC4iI2EpJWkwOykyNiVpMC4gIGU3LC01LWE3LT8sIyskNycgYz8tMyooKG1FRg8qKmkmPS03JCkmYzoiYTUrOSwjI29lATsiOS0sKmQtNipsJjcxOTMmbCItIWksLC80NSU/IiEjYSkraTA7KTI2K2kwPy07LCtlYy4gLSRkOjcqPzIkZC0qPDggKz4oYystLSklaSUgIjUgZC0qbyA0JiFlYz8pM2U1PCI7ODMqZCoqLCAoZSg8LSgkKGUlJWMoJS43KiZtRUYRKi1lYyYiYTAqaS4uODUsKiZjPjkgKTEnMjopbWUnIGMpKTMoJSQuIGwkKzA7IiIuKGUgKDUuIjUsZCgvIy1hNjAsMDwtYTMhPTEmIiBlICBjLiIvMCoqKmFGSwshOjA6Ii5lNiAgID4lJGQqLDwtYSMxaScqODUqamkXOjg1LGQ7KiwjMyElJyxvLykgZC8iLCksKCtpNy4+JSxoaSZvLykgZCcsIWwiIGQnJm8lLDUrOzeM/mErLSwtOylvT04NIm89NCAoaSQmIzMrK2klOiEsKmQ8LW88LjUrJSxvPy4pK2c="
-  },
-  {
-   "id": "T-02",
+   "id": "KNDL-02",
    "pianeta": "P1",
    "titolo": "Sulla misura del tempo",
    "sigillo": "KNDL-02",
-   "cifra": "p9PPCAYCBQkBG4H4DRMGDAAVBgOD8jJ4odjKSwYrJzcuISwqZC4vJmwgKyogYy5sMSQ2PSo9KWEhJSVjIi01MS0nLG8oJCkoKGM5KTU3LSciY2wkZSomLW8oICkoKGM/PigoJWk1ICA1JGQqKypsIixkPyYrKSwoK2dJRR00IDc9LG8vLisiPDAqbChlKiYwOz4oZSU7ICclNyw3PSpvPCQ3ZC4mISkzJD4gLCElb2UILGMrOSRlICg3KmwlLDc9IiEjYTYhIGM9IzUkPiAsISVvT04FIm8/MSwhLiI1JS4rIWmA52wyICk5LyYvJGUhaS0qPzIwKiZjIy1hNic7Kjw/JGUpKCpjbDEgNiorjOVhJGQ9Njs4KGU3LC4tPiAzJWksOTooJH5DJjwlMjEhOyZvIiQpKCZjPDgkNjcmYz8jMjEraS0gImGG7GkqIS8uKzA7Ij0/KGs="
+   "tipo": "comune",
+   "scorrimento": 6,
+   "cesare": "Iutzgssu mro gtto g vgxzoxk jgr sgzzotu jkrrg bkzxotg, k tut jgrrg vxosg burzg ink io bkjkssu.\n\nWakyzu iutlayk o tuyzxo gxinoboyzo vkx mktkxgfouto. Rk jak jgzk joyzgtu yko xuzgfouto.\n\nRg yvokmgfoutk è yksvroik k tkyyatu rg yixoyyk sgo, vkxiné g zazzo ykshxgbg ubbog:\nkyoyzkxk tkrru yzkyyu vuyzu tut è otiutzxgxyo.",
+   "parole": [
+    "MATTINO",
+    "ARCHIVISTI"
+   ]
   },
   {
-   "id": "T-03",
-   "pianeta": "P2",
-   "titolo": "La frattura",
-   "sigillo": "KNDL-03",
-   "cifra": "sdjBBwAPFwMCHov2Eh0EBAAXGgCF+z9wsdjBRgUgcyk1LT01Jj0mbCcuPW8iLiskczopbCouPz8iOiYtNmFnHTwkIDsobCUgcz0iPyxhIyaE9WklOikhJSooPypnKChhISY3LTsgISprbCcuPW83JYr4cykmLyAtNmFNRhwvPG8jJWkvPCZnPyBhNSo1IYrzfW8AICBhMiMzPiBhPSApbCwvJz0mPiYvPGFNRggzISYxLSQsPG8hJScucy4rIChhICAgICAgcyIoID0kczkoID0kfW8TIzsvMiIqI2koPSsuKT0zPG8mID0zNjszLSc1NmFnACxhJz0mLyokcysubCg3JSYkJScgPiopOCZhICApI2klPCwyISwvJy4zKWkyJm8zOT01PG8uIGkiPD01JS0uOiBnKTo1Nj0pI3JhJz0mLyokcysubCAvND0iPzouf28pKToyJiEmYkNLECZnKCAiNiIqI2kiOypnKTsgcz8iPmkvPCFnKCAyJzo1LigzNmFNCTsgcyMmbDoiJjwmbDkokPZnLyYsPCsmbCopNm8mOiwyICYqI2c="
-  },
-  {
-   "id": "T-04",
+   "id": "KNDL-04",
    "pianeta": "P2",
    "titolo": "Sull'architettura di questo luogo",
    "sigillo": "KNDL-04",
-   "cifra": "sdjBBwAPFwMCHov2Eh0EBAAXGgCF+z9wsdjBRgopOm8xJTooJy5nPTwkIDsobDkoMiEiOChhPSAzLWkxISo0OCZhMCcibCYmPSZnPCwzMCA1PyZhMCApKDwiNm8mICUgczwzKToyMm8kLSQkIS5pRkMPPCFnj+FhJiFnKTszPD0ibC0ocywoPz0zJjUuIyckfW+ExGktdDopJSogcywoPyhhMCcibCgjMSYmISZhMCA0ODs0OjsobC0ocz81IzkuICYzI2dLWQNgOToiOjsmbCcuPW80JWk1ISAxLWkgPyMoIj0gPS4pKCYyOm8jLWkwJiorIChhMC4qKTsgfUUUJWk1ISAxLWkgJzs1LT8kITwmIi0uPy5p"
+   "tipo": "comune",
+   "scorrimento": 8,
+   "cesare": "Kpq dqaqbi ycmabw xqivmbi vwbi xzmabw kpm wovq xmzkwzaw kwvlckm itti abmaai kiumzi.\n\nVwv è cv mzzwzm lq kwabzchqwvm. È t'cvqki kwai kpm ijjqiuw kwabzcqbw lq xzwxwaqbw.\n\nTm bzikkm lq kpq aq m' nmzuibw amvhi mvbzizm awvw wdcvycm act kwzzqlwqw mabmzvw,\nm awvw t'cvqki kwai kpm ijjqiuw tiakqibw amvhi dwtmztw.\n\nT'cakqbi vwv aq bzwdi ittwvbivivlwaq li ycmtti kiumzi.\nAq bzwdi ibbzidmzaivlwti.",
+   "parole": [
+    "CAMERA",
+    "TRACCE",
+    "PERCORSO"
+   ]
   },
   {
-   "id": "T-05",
-   "pianeta": "P3",
-   "titolo": "Il ritorno",
-   "sigillo": "KNDL-05",
-   "cifra": "oNLUDAgDCxgRHYDyExUCBQYCHQCA8iR2o9rJXgAgMCszKiwiY3Q5LmIrPSlhKiM9dDw2ICE0KGNFXhsoLDA8KGE9ICYgLjQkcigzLG8hOi5iNiYmLzcudCQ9LTUgLiBhbz06byEwO2cmISZ0NSM2NztnLyIhdDEhNjczMSAjIHp0GycoNzEgICB0NycnZSMyJD47O3QpLTYhImEkI3QmKjEsNjIubSsxOCMjZTQ1IDk7ISYubE9YAjMsbz06OScmN2ctLG8kJiYvJHIkLj4udCcuLCRyJCkobzc9byQqITQkbSw1JCY2JCYme20qJjU5Iyg9ZzA4LiAgPS1pciJhKyY6NSMvIDwzJG0qJjU5Iyg9ZyAjLDwxbzMwMzM1PyB0JCowNj0pJGNFXgU6Jyk+JmE+KiY1bzY3PTEgICI7dDosJHI3Lj87NXQsKiByKS4jbyc9byM1IITtY28XNSIvLDwmLCAgdCIqLDE7ZywkISEgJmxlBjUuOy45OSBiKXUmLTk9NXpFSAkzZzEiPSA1byEtOzIyLG+X/G8uYicpKC4gdDkgNiwkKGE9KiZ0LDcscjMzIjk1OSItZSMyJCEjNXQoKzAhMyBj"
-  },
-  {
-   "id": "T-06",
+   "id": "KNDL-06",
    "pianeta": "P3",
    "titolo": "Frammento ricorrente",
    "sigillo": "KNDL-06",
-   "cifra": "oNLUDAgDCxgRHYDyExUCBQYCHQCA8iR2o9rJXh0hISwhKGE+OnQgOjYxO2ckbTsmMW8rZSIuICMqID1jYjU7hPhtJjp0PzAqNCgvKSYgl+9iITtnLiohPXQuLjEgJmEuICc1dUhPkOwXAgZ0Eg4WAHIWFAgDGBtvAQ0XZxcCAxEACmxlGwhhBQB0HQNiCBsIYQ4AGQQOBQsdag4KCBEAGw1rkPxLRwZ0OiAxMSAuYSw9NzwmNCwhMyhtIzt0LC4kITQoKyY3NT0tKz1nIG0jITooLWUxKCwobzA9LCosMzUgNyY7OipiITtnIDg7Oyc6JCM7JCgoIS41Y2IgcjY0JCEwPW8hKj8iYT09PTkgYjY3IC8ibzAxIy4kciEzLDsgIT0ja1hNEiRvJzYuJSk7JjcsITt0KytlISIvPiB4dCEtK3IjKG0jMSA7JzczaUsDIDp0jOplPyYobTwgNTstZScpYSAgMDtvMiAgZyAjKzUmPCcrN2lhjsd0PSNiNicoYSAgMDtvJixyNSQ+OzUmKmIrNystLG8nIC4sPzNp"
+   "tipo": "comune",
+   "scorrimento": 10,
+   "cesare": "Sxmscy ce dedds o dbo s zskxods, zsù sx zbypyxnsdà ns yqxs kvdbk myck:\n\n«FYS PKDO AEOVVY MRO FYVODO. SY RY SV WSY MYWZKQXY-YQQODDY.»\n\nS xycdbs kbmrsfscds vy mvkccspsmkbyxy k vexqy mywo nsmrskbkjsyxo ns kedyceppsmsoxjk, o aesxns mywo zbswy coqxy novvk pbkddebk.\n\nCs clkqvskfkxy ns coxcy, xyx ns voddobk.\nEx'kvdbk scmbsjsyxo, cevvy cdoccy zskxodk, xywsxk exk lofkxnk.\nS neo dobwsxs myxnsfsnyxy vk bknsmo, o aeocdy s xycdbs kbmrsfscds xyx vy xydkbyxy wks.\n\nXyx è wks cdkdy ex wyny zob kxnkbcoxo. È sv cey wyny ns bocdkbo xovvk cdkxjk.",
+   "parole": [
+    "COMPAGNO",
+    "BEVANDA",
+    "RADICE"
+   ]
   },
   {
-   "id": "T-FINALE",
+   "id": "KNDL-01",
+   "pianeta": "P1",
+   "titolo": "Prima registrazione",
+   "sigillo": "KNDL-01",
+   "tipo": "chiave",
+   "cifra": "p9PPCAYCBQkBG4H4DRMGDAAVBgOD8jJ4odjKSxUhO2M8KShlNiY3LjYoKiogYyslNywgLC4iI2EpJWkwOykyNiVpMC4gIGU3LC01LWE3LT8sIyskNycgYz8tMyooKG1FRg8qKmkmPS03JCkmYzoiYTUrOSwjI29lATsiOS0sKmQtNipsJjcxOTMmbCItIWksLC80NSU/IiEjYSkraTA7KTI2K2kwPy07LCtlYy4gLSRkOjcqPzIkZC0qPDggKz4oYystLSklaSUgIjUgZC0qbyA0JiFlYz8pM2U1PCI7ODMqZCoqLCAoZSg8LSgkKGUlJWMoJS43KiZtRUYRKi1lYyYiYTAqaS4uODUsKiZjPjkgKTEnMjopbWUnIGMpKTMoJSQuIGwkKzA7IiIuKGUgKDUuIjUsZCgvIy1hNjAsMDwtYTMhPTEmIiBlICBjLiIvMCoqKmFGSwshOjA6Ii5lNiAgID4lJGQqLDwtYSMxaScqODUqamkXOjg1LGQ7KiwjMyElJyxvLykgZC8iLCksKCtpNy4+JSxoaSZvLykgZCcsIWwiIGQnJm8lLDUrOzeM/mErLSwtOylvT04NIm89NCAoaSQmIzMrK2klOiEsKmQ8LW88LjUrJSxvPy4pK2c="
+  },
+  {
+   "id": "KNDL-03",
+   "pianeta": "P2",
+   "titolo": "La frattura",
+   "sigillo": "KNDL-03",
+   "tipo": "chiave",
+   "cifra": "sdjBBwAPFwMCHov2Eh0EBAAXGgCF+z9wsdjBRgUgcyk1LT01Jj0mbCcuPW8iLiskczopbCouPz8iOiYtNmFnHTwkIDsobCUgcz0iPyxhIyaE9WklOikhJSooPypnKChhISY3LTsgISprbCcuPW83JYr4cykmLyAtNmFNRhwvPG8jJWkvPCZnPyBhNSo1IYrzfW8AICBhMiMzPiBhPSApbCwvJz0mPiYvPGFNRggzISYxLSQsPG8hJScucy4rIChhICAgICAgcyIoID0kczkoID0kfW8TIzsvMiIqI2koPSsuKT0zPG8mID0zNjszLSc1NmFnACxhJz0mLyokcysubCg3JSYkJScgPiopOCZhICApI2klPCwyISwvJy4zKWkyJm8zOT01PG8uIGkiPD01JS0uOiBnKTo1Nj0pI3JhJz0mLyokcysubCAvND0iPzouf28pKToyJiEmYkNLECZnKCAiNiIqI2kiOypnKTsgcz8iPmkvPCFnKCAyJzo1LigzNmFNCTsgcyMmbDoiJjwmbDkokPZnLyYsPCsmbCopNm8mOiwyICYqI2c="
+  },
+  {
+   "id": "KNDL-05",
+   "pianeta": "P3",
+   "titolo": "Il ritorno",
+   "sigillo": "KNDL-05",
+   "tipo": "chiave",
+   "cifra": "oNLUDAgDCxgRHYDyExUCBQYCHQCA8iR2o9rJXgAgMCszKiwiY3Q5LmIrPSlhKiM9dDw2ICE0KGNFXhsoLDA8KGE9ICYgLjQkcigzLG8hOi5iNiYmLzcudCQ9LTUgLiBhbz06byEwO2cmISZ0NSM2NztnLyIhdDEhNjczMSAjIHp0GycoNzEgICB0NycnZSMyJD47O3QpLTYhImEkI3QmKjEsNjIubSsxOCMjZTQ1IDk7ISYubE9YAjMsbz06OScmN2ctLG8kJiYvJHIkLj4udCcuLCRyJCkobzc9byQqITQkbSw1JCY2JCYme20qJjU5Iyg9ZzA4LiAgPS1pciJhKyY6NSMvIDwzJG0qJjU5Iyg9ZyAjLDwxbzMwMzM1PyB0JCowNj0pJGNFXgU6Jyk+JmE+KiY1bzY3PTEgICI7dDosJHI3Lj87NXQsKiByKS4jbyc9byM1IITtY28XNSIvLDwmLCAgdCIqLDE7ZywkISEgJmxlBjUuOy45OSBiKXUmLTk9NXpFSAkzZzEiPSA1byEtOzIyLG+X/G8uYicpKC4gdDkgNiwkKGE9KiZ0LDcscjMzIjk1OSItZSMyJCEjNXQoKzAhMyBj"
+  },
+  {
+   "id": "KNDL-00",
    "pianeta": "FIN",
    "titolo": "Ultima registrazione",
    "sigillo": "KNDL-00",
+   "tipo": "chiave",
    "cifra": "tsXDBR0PEB4AHJb2FQAGBh0XHR2H+SJwtsXDRAckdCExLz1hODciKTEvMD1lPyEkJyYqYnQpNTtlIjFhICAgbjkkNzEkID0iPDdpbjFhJScsIDAodCEgJ3QzPT8kPSAudD0pOiYkdD4kbjg0NzdrbgAodDYqLDYoNT8qbjA0MXI2Pj0kMzM/JzsvPXxPRBgAdAIXBxkAenILITphJyYkJ3QmITM3KjUvMD1lOzogdCExKzgtNXImJjFhOScqPDFvdAExLz1hMyckPDAgOjYqbiEvNXI2OjEtODNlLTwkdCEsbjUiNzcrKjFvdB0iID1hIj0pOjVhNzogbjczMTYgOD1hMDtlIzszPSAgYnQyIDMzJ3QgJyEsPSAkOjYqbjVhITxlJzooLjsqYnQlNT4pL3QxNSAxK3QyNjMiIj0gIDNrRF4NNXI2OjEtODNlKyYgdDUsjfRhOJHpYnQxJjsoL3phEiAgKjAgeHIrKzgtNXI2OjEyJzNlPSAgOigkYnQxMSBlPTEodCAqOjU7PT0rJ3phGjc2PSEvO3IpL3QiOzwxLyIgdCIgPDcpl/tlIDsvdDYkODVhOCcmK3phFz0rOjUzMXIpaTUiNzcrPT0uOjdlK3QvOzxlInMkJzs2OjEvLjNljfxhJyYkOjthPT5lIDsyICAqbiEvPTEqbjEzJj03K3QlPXIkPDcpPSQsIXhhMXIpIXQgNjAsLzkudD4kPTcoNSYqbjcuJ5HpYF5LGBNlHRECGxwBD3hhNzogbpfpdD4kbjAuOTMrKjVhNzogbiAodCEgJ3QnNSYxIXQlNT5lPiYoOT1lIjsuJHxlHjEzNzqG53QwITc2OjthJzs2OjEsNXI2J3QzPSIgOjFvXlgVKyYiPJHsbjouOnI2JzUsO3I3JyEyNzsxJ3QgdDEqICckJiQkPDFhPT5lPD0iOyAhIXQlPXI0OzEtdD8kOiAoOj1rbhcodDMnLD0gOT1lPiYuIjMxIXQiOzxlKTgodDM3LTwoIjtpbjcuOnIpK3QoOjEsPT0uOjtpbjcuOnIsbiYkMzs2OiYobnIwIHQzPTEqPDAudCAkLTcuOiYkOjthOj0rbpfpdDspbjkgICYsIDtvdBMpIjszNXIkLDYoNT8qbicsMSE2IXQlPXImIToyMSAzLyYkdDspbiYoNz03KjthMXIkLDYoNT8qbjcuOiEgPCIgID1lJzhhOTMxOj0vO3xPRB0tdD4qISRhMCc3L3Q1JjcrOjVhOTsrOyAodCIgPDcpl/tlOiYkOiYkbjkoOicxJ3SC/HI0OzUvID1lKiEzl+BrRF4IOHIxKzkxO3I2LTszJjdlLzhhNz0rOiYgJjsqbiQkJjEtjf1hOj0rbic1PTMoIXQgJyIgOiAgOjYqbjggdDQsIDFvdAExJzUsO3I3JzU3Ij0pKTEvMD1lODEzJz1lInMoOjs/JzttdDdlIjthJjsjLzciPTMoIXQlNXIkIjguJjNpbiQkJnImJj00OiMwK3Q1OyArJ3QgdCQgKjEzOD1rRF4VISYxIXSC/HInKzokdDEsjeZhNzogbjIoOjs2LTFvXhdlOiE1ID1lLT2C5nImJjFhNz0oJzoiPTNr"
   }
  ],
  "log": [
   {
-   "id": "L-01",
-   "pianeta": "P1",
+   "id": "LOG-01",
    "sigillo": "LOG-01",
-   "titolo": "Rilevamento superficie · P1",
-   "corpo": "Sala rettangolare. Sedute disposte in griglia. Due individui registrati alla stessa distanza dalla fonte di luce.\nNessuna interazione registrata per l'intera durata dello strato.",
-   "indizio": "Lo strato è anteriore all'accensione di S-0. Il corpo centrale risulta presente ma freddo."
-  },
-  {
-   "id": "L-02",
    "pianeta": "P1",
+   "titolo": "Rilevamento superficie",
+   "corpo": "Sala rettangolare, sedute in griglia. Due individui alla stessa distanza dalla fonte di luce.\\nNessuna interazione registrata per l'intera durata dello strato.",
+   "indizio": "La commutazione dei tempi verbali avviene al mattino della vetrina. La parola che apre lo strato profondo di questo pianeta e' il LUOGO dove ci si fermo': una struttura piccola, a bordo strada, che distribuisce supporti stampati.",
+   "parola": "MATTINO"
+  },
+  {
+   "id": "LOG-02",
    "sigillo": "LOG-02",
-   "titolo": "Anomalia di catalogazione",
-   "corpo": "Ogni riferimento a S-0 negli strati anteriori a T-01 è al tempo FUTURO.\nOgni riferimento negli strati posteriori è al PASSATO.",
-   "indizio": "La commutazione avviene esattamente al mattino della vetrina. Chiave suggerita dal contesto: il luogo dove ci si fermò."
+   "pianeta": "P1",
+   "titolo": "Nota dell'archivista",
+   "corpo": "Gli archivisti Kindler catalogavano per strati, non per date. Questo rende l'archivio leggibile solo a chi accetta di andare all'indietro.",
+   "indizio": "Enigma della Sala Comune: il percorso non deve mai staccarsi dal bordo esterno per piu' di un passo. Chi lo ha inciso pensava a un serpente che risale.",
+   "parola": "ARCHIVISTI"
   },
   {
-   "id": "L-03",
-   "pianeta": "P2",
+   "id": "LOG-03",
    "sigillo": "LOG-03",
-   "titolo": "Corridoi esterni",
-   "corpo": "Tracce di avvicinamento ripetuto. Nessuna traccia di ingresso.\nGli individui esterni arrivano fino a un punto preciso e tornano indietro. Ripetutamente, per l'intera durata dello strato.",
-   "indizio": "Il punto preciso ha un nome nella lingua Kindler. È la parola che apre lo strato."
-  },
-  {
-   "id": "L-04",
    "pianeta": "P2",
+   "titolo": "Corridoi esterni",
+   "corpo": "Tracce di avvicinamento ripetuto. Nessuna traccia di ingresso.\\nGli individui esterni arrivano fino a un punto preciso e tornano indietro.",
+   "indizio": "La parola che apre lo strato profondo di questo pianeta e' il nome del punto preciso a cui tutti arrivavano e da cui tutti tornavano indietro. E' scritta ovunque su questo pianeta e nessuno la pronuncia.",
+   "parola": "TRACCE"
+  },
+  {
+   "id": "LOG-04",
    "sigillo": "LOG-04",
+   "pianeta": "P2",
    "titolo": "Conteggio delle occupazioni",
-   "corpo": "Ultima occupazione registrata della sala grande: quattro individui.\nOgni occupazione successiva: tre.\nIl conteggio non risale mai.",
-   "indizio": "Nessuno lasciò il gruppo. Uno solo smise di essere contato."
+   "corpo": "Ultima occupazione registrata della sala grande: quattro individui.\\nOgni occupazione successiva: tre. Il conteggio non risale mai.",
+   "indizio": "Enigma della Camera Centrale: l'uscita non e' in cima ne' in fondo, e' a meta' del fianco. Chi cerca l'angolo opposto perde il loop.",
+   "parola": "CAMERA"
   },
   {
-   "id": "L-05",
-   "pianeta": "P3",
+   "id": "LOG-05",
    "sigillo": "LOG-05",
+   "pianeta": "P3",
    "titolo": "Indice nominale parziale",
-   "corpo": "Designazioni ricorrenti nell'archivio, per frequenza:\nBERG (strati I-IX) · POM (I-IX) · ANDREA (I-IX)\nBERGOTTO (III-VI) · SNIUNZI (V-VII)\n[non attribuito] — mai come soggetto, presente in ogni strato come mano.",
-   "indizio": "Sei designazioni. Tre compaiono ovunque. Due compaiono e scompaiono senza sostituire nessuno. La sesta non è mai soggetto. Quanti erano davvero?"
+   "corpo": "BERG (strati I-IX) - POM (I-IX) - ANDREA (I-IX)\\nBERGOTTO (III-VI) - SNIUNZI (V-VII)\\n[non attribuito] - mai come soggetto, presente in ogni strato come mano.",
+   "indizio": "Sei designazioni. Tre compaiono in ogni strato, due compaiono e scompaiono senza sostituire nessuno, la sesta non e' mai soggetto ma solo mano. Quanti erano davvero?",
+   "parola": "COMPAGNO"
   },
   {
-   "id": "L-06",
-   "pianeta": "P3",
+   "id": "LOG-06",
    "sigillo": "LOG-06",
+   "pianeta": "P3",
    "titolo": "Camera risolta",
-   "corpo": "Quattro individui, seduti, per una durata superiore a qualunque altra registrazione del sistema.\nNessuna attività. Nessuno spostamento. Solo durata.\nIscrizione a parete: «BUONA QUESTA BEVANDA AL FRUTTO.»",
-   "indizio": "Il termine per il frutto e una delle designazioni nominali dell'archivio condividono la stessa radice. Coincidenza non verificabile. È anche la chiave di questo strato."
+   "corpo": "Quattro individui, seduti, per una durata superiore a qualunque altra registrazione.\\nNessuna attivita'. Solo durata.\\nIscrizione a parete: BUONA QUESTA BEVANDA AL FRUTTO.",
+   "indizio": "La parola che apre lo strato profondo di questo pianeta e' il nome del FRUTTO dell'iscrizione a parete. Condivide la radice con una delle designazioni nominali: e' la forma lunga, non quella corta.",
+   "parola": "BEVANDA"
+  },
+  {
+   "id": "LOG-07",
+   "sigillo": "LOG-07",
+   "pianeta": "FIN",
+   "titolo": "Protocollo terminale",
+   "corpo": "L'ultima registrazione e' raggiungibile solo restando oltre la luce.\\nRichiede tutte e tre le meccaniche.",
+   "indizio": "Con le tre meccaniche in mano, la parola che apre la registrazione terminale non e' un luogo ne' un oggetto: e' un NUMERO scritto in lettere. Quanto dura un loop.",
+   "parola": "RADICE"
+  },
+  {
+   "id": "LOG-08",
+   "sigillo": "LOG-08",
+   "pianeta": "P3",
+   "titolo": "Osservatorio, note di manutenzione",
+   "corpo": "L'osservatorio ha un solo asse di simmetria. Chi lo ignora gira a vuoto.",
+   "indizio": "Enigma dell'Osservatorio: si entra e si esce dalla stessa colonna centrale. I due punti obbligati stanno sui fianchi, alla stessa altezza.",
+   "parola": "PERCORSO"
   }
  ],
  "stanze": [
@@ -270,21 +330,21 @@ window.DATI = {
    "pianeta": "P1",
    "nome": "La Sala Comune",
    "codice": "VETRINA",
-   "sblocca": "Rivela T-01 e la meccanica PORTARE."
+   "sblocca": "Rivela KNDL-01 e la meccanica PORTARE."
   },
   {
    "id": "S-P2",
    "pianeta": "P2",
    "nome": "La Camera Centrale",
    "codice": "CORRIDOIO",
-   "sblocca": "Rivela T-03 e la meccanica PERCEPIRE."
+   "sblocca": "Rivela KNDL-03 e la meccanica PERCEPIRE."
   },
   {
    "id": "S-P3",
    "pianeta": "P3",
    "nome": "L'Osservatorio",
    "codice": "PORTA",
-   "sblocca": "Rivela T-05 e la meccanica SCEGLIERE."
+   "sblocca": "Rivela KNDL-05 e la meccanica SCEGLIERE."
   },
   {
    "id": "S-FIN",
@@ -311,10 +371,16 @@ const clear = n => { while (n.firstChild) n.removeChild(n.firstChild); };
 
 /* ---------------- stato locale (per dispositivo) ---------------- */
 const SK = 'emberloop.v1';
-let S = { testi: [], log: [], stanze: [], mecc: [], plain: {} };
+let S = { testi: [], log: [], stanze: [], mecc: [], plain: {}, storico: [] };
 try { Object.assign(S, JSON.parse(localStorage.getItem(SK) || '{}')); } catch (e) {}
 const save = () => { try { localStorage.setItem(SK, JSON.stringify(S)); } catch (e) {} };
 const add = (k, v) => { if (!S[k].includes(v)) { S[k].push(v); save(); } };
+/** Registra un'azione nello storico locale, con il suo costo in minuti. */
+function segna(tipo, cosa, minuti) {
+  S.storico = S.storico || [];
+  S.storico.push({ t: tipo, c: cosa, m: minuti, q: new Date().toISOString().slice(11, 16) });
+  save();
+}
 
 /* ---------------- decifratura ---------------- */
 const MARCA = '\u25c6KINDLER\u00b7ARCHIVIO\u00b7v1\u25c6\n';
@@ -327,6 +393,36 @@ function decifra(b64, chiave) {
   return t.slice(MARCA.length);
 }
 const prova = (b64, k) => { try { return decifra(b64, k); } catch (e) { return null; } };
+
+/* ---------------- Cesare + riconoscimento italiano ---------------- */
+const AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function cesare(t, sc) {
+  let o = '';
+  for (const ch of t) { const u = ch.toUpperCase(); const i = AZ.indexOf(u);
+    if (i < 0) { o += ch; continue; }
+    const n = AZ[(i + sc % 26 + 26) % 26]; o += (ch === u ? n : n.toLowerCase()); }
+  return o;
+}
+const COMUNI = [' di ',' che ',' la ',' il ',' e ',' non ',' per ',' una ',' del ',' con ',
+                ' si ',' in ',' un ',' le ',' ci ',' era ',' come ',' della ',' nel ',' piu'];
+function punteggioItaliano(t) {
+  const s = ' ' + t.toLowerCase() + ' '; let n = 0;
+  for (const w of COMUNI) { let i = 0; while ((i = s.indexOf(w, i)) >= 0) { n++; i++; } }
+  return n;
+}
+/** Prova tutti i 25 scorrimenti e tiene quello che somiglia di piu' all'italiano. */
+function craccaCesare(testoCifrato) {
+  let best = null, bestSc = 0, bestP = -1;
+  for (let sc = 1; sc <= 25; sc++) {
+    const p = cesare(testoCifrato, -sc), q = punteggioItaliano(p);
+    if (q > bestP) { bestP = q; best = p; bestSc = sc; }
+  }
+  return { testo: best, scorrimento: bestSc, punteggio: bestP };
+}
+
+/* ---------------- costi in minuti ---------------- */
+const COSTO = { crack: 1, consulta: 1, tentativo: null };  // null = tira 1d4+1
+const d4p1 = () => 1 + Math.floor(Math.random() * 4) + 1;
 
 /* ---------------- glifi Kindler (deterministici dal sigillo) ---------------- */
 const GL = '▲▼◆◇○●□■△▽◁▷◀▶┌┐└┘├┤┬┴┼─│╱╲╳⌐¬±∴∵≈≠≡⊂⊃⊕⊗⌂'.split('');
@@ -407,8 +503,7 @@ V.decifra = () => {
   vt.textContent = 'Decifratore'; vs.textContent = 'Software di decifrazione testi';
   clear(app);
   const out = el('div');
-  const codeIn = el('input', { type: 'text', placeholder: 'KNDL-01', inputmode: 'text', autocapitalize: 'characters' });
-  const msg = el('p', { class: 'hint' }, 'Se la fotocamera non parte (o apri il file in locale), digita il codice del sigillo. La chiave te la d\u00e0 il Master o la trovi nel diario.');
+  const codeIn = el('input', { type: 'text', placeholder: 'KNDL-01', autocapitalize: 'characters' });
   const apri = code => {
     const t = D.testi.find(x => x.sigillo.toUpperCase() === code);
     if (!t) { clear(out); out.append(el('p', { class: 'err' }, '⚠ Sigillo non riconosciuto: ' + code)); return; }
@@ -420,7 +515,7 @@ V.decifra = () => {
       el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Codice sigillo'), codeIn),
       el('button', { class: 'big ghost', type: 'button', style: 'margin-top:12px',
         onclick: () => apri(codeIn.value.trim().toUpperCase()) }, 'Apri reperto'),
-      msg),
+      el('p', { class: 'hint' }, 'Se la fotocamera non parte, digita il codice stampato sotto il sigillo.')),
     out);
 };
 
@@ -428,32 +523,66 @@ function mostraTesto(out, t) {
   clear(out);
   const pia = D.pianeti.find(p => p.id === t.pianeta);
   const box = el('div', { class: 'card' });
-  box.append(el('div', { class: 'eyebrow' }, t.sigillo + (pia ? ' · ' + pia.sub : ' · registrazione terminale')),
+  box.append(el('div', { class: 'eyebrow' }, t.sigillo + ' · ' + (pia ? pia.sub : 'registrazione terminale')),
     el('h3', { style: 'margin:6px 0 12px;font-size:19px' }, t.titolo));
-  if (S.testi.includes(t.id)) { rivela(box, t); out.append(box); return; }
-  box.append(el('div', { class: 'glyphs' }, glifi(t.sigillo, 130)));
-  const kIn = el('input', { type: 'text', class: 'k-in', placeholder: 'chiave', autocapitalize: 'characters' });
-  const fb = el('p', { class: 'hint' }, 'La chiave si trova nel diario di bordo o dietro un enigma.');
-  const tenta = () => {
-    const k = kIn.value.trim();
-    if (!k) return;
-    const p = prova(t.cifra, k);
-    if (p) { S.plain[t.id] = p; add('testi', t.id); save(); rivela(box, t, true); }
-    else { fb.className = 'err'; fb.textContent = '⚠ La chiave non tiene. Il testo resta illeggibile.'; kIn.value = ''; }
-  };
-  kIn.addEventListener('keydown', e => { if (e.key === 'Enter') tenta(); });
-  box.append(el('label', { class: 'fld', style: 'margin-top:14px' }, el('span', { class: 'lbl' }, 'Chiave di decifrazione'), kIn),
-    el('button', { class: 'big k-go', type: 'button', style: 'margin-top:12px', onclick: tenta }, 'Decifra'), fb);
+
+  if (S.plain[t.id]) { rivela(box, t); out.append(box); return; }
+
+  if (t.tipo === 'comune') {
+    /* ---- Cesare: il software lo rompe da solo ---- */
+    box.append(el('div', { class: 'eyebrow', style: 'color:var(--cold);margin-bottom:8px' },
+        'Cifratura semplice · a scorrimento'),
+      el('div', { class: 'glyphs', style: 'letter-spacing:.05em;font-size:14px' }, t.cesare.slice(0, 420)));
+    const esito = el('p', { class: 'hint' }, 'Il software prova tutti e 25 gli scorrimenti. Costa 1 minuto.');
+    box.append(el('button', { class: 'big crack-go', type: 'button', style: 'margin-top:14px', onclick: () => {
+        const r = craccaCesare(t.cesare);
+        S.plain[t.id] = r.testo; add('testi', t.id); save();
+        segna('crack', t.sigillo, COSTO.crack);
+        rivela(box, t, true, r.scorrimento);
+      } }, '⟳  Crack automatico  ·  1 min'), esito);
+  } else {
+    /* ---- Vigenère: serve la parola esatta ---- */
+    box.append(el('div', { class: 'eyebrow', style: 'color:var(--ember);margin-bottom:8px' },
+        'Cifratura a chiave · la forza bruta non basta'),
+      el('div', { class: 'glyphs' }, glifi(t.sigillo, 120)));
+    const kIn = el('input', { type: 'text', class: 'k-in', placeholder: 'parola chiave', autocapitalize: 'characters' });
+    const fb = el('p', { class: 'hint' }, 'Ogni tentativo costa 1d4+1 minuti, giusto o sbagliato. Il Consultatore puo\u2019 farti risparmiare.');
+    const tenta = () => {
+      const k = kIn.value.trim(); if (!k) return;
+      const costo = d4p1();
+      const p = prova(t.cifra, k);
+      segna('tentativo', t.sigillo + ' · ' + (p ? 'riuscito' : 'a vuoto'), costo);
+      if (p) { S.plain[t.id] = p; add('testi', t.id); save(); rivela(box, t, true); }
+      else { fb.className = 'err';
+        fb.textContent = '⚠ La chiave non tiene. Persi ' + costo + ' minuti.'; kIn.value = ''; }
+    };
+    kIn.addEventListener('keydown', e => { if (e.key === 'Enter') tenta(); });
+    box.append(el('label', { class: 'fld', style: 'margin-top:14px' },
+        el('span', { class: 'lbl' }, 'Chiave di decifrazione'), kIn),
+      el('button', { class: 'big k-go', type: 'button', style: 'margin-top:12px', onclick: tenta },
+        'Decifra  ·  1d4+1 min'), fb);
+  }
   out.append(box);
 }
-function rivela(box, t, anim) {
+
+function rivela(box, t, anim, scorrimento) {
   clear(box);
   const pia = D.pianeti.find(p => p.id === t.pianeta);
   box.className = 'card acc';
-  box.append(el('div', { class: 'eyebrow', style: 'color:var(--ember)' }, t.sigillo + ' \u00b7 decifrato'),
+  box.append(el('div', { class: 'eyebrow', style: 'color:var(--ember)' },
+      t.sigillo + ' · decifrato' + (scorrimento ? ' · scorrimento ' + scorrimento : '')),
     el('h3', { style: 'margin:6px 0 12px;font-size:19px' }, t.titolo),
     el('div', { class: 'plain' + (anim ? ' rev' : '') }, S.plain[t.id] || ''));
-  if (pia) {
+
+  if (t.tipo === 'comune' && t.parole && t.parole.length) {
+    const w = el('div', { class: 'card cold', style: 'margin:16px 0 0' },
+      el('div', { class: 'eyebrow', style: 'color:var(--cold)' }, 'Parole da passare al Consultatore'),
+      el('p', { style: 'margin:6px 0 10px;font-size:13.5px;color:var(--dim)' },
+        'Leggile ad alta voce. Lui le digita nel diario di bordo per ottenere gli indizi.'));
+    t.parole.forEach(p => w.append(el('span', { class: 'chip on', style: 'font-size:13px;padding:6px 12px' }, p)));
+    box.append(w);
+  }
+  if (pia && t.tipo === 'chiave') {
     const nuova = !S.mecc.includes(pia.meccanica);
     if (nuova) add('mecc', pia.meccanica);
     box.append(el('div', { class: 'card cold', style: 'margin:16px 0 0' },
@@ -465,35 +594,52 @@ function rivela(box, t, anim) {
 
 /* ---- 02 · CONSULTATORE DEL LOG ---- */
 V.log = () => {
-  vt.textContent = 'Consultatore'; vs.textContent = 'Diario di bordo · archivio indizi';
+  vt.textContent = 'Consultatore'; vs.textContent = 'Diario di bordo · interrogazione per parola';
   clear(app);
-  const lista = el('div');
-  const disegna = () => { clear(lista);
+  const lista = el('div'), cont = el('div', { class: 'eyebrow', style: 'margin:22px 0 10px' });
+  const fb = el('p', { class: 'hint' },
+    'Il Decifratore ti legge le parole trovate nei testi. Digitane una: se l\u2019archivio la conosce, restituisce un indizio. Costa 1 minuto.');
+
+  const disegna = () => {
+    clear(lista);
     D.log.forEach(L => {
       const ap = S.log.includes(L.id);
       const it = el('div', { class: 'item' + (ap ? '' : ' lock') });
-      it.append(el('div', { class: 'meta' }, L.sigillo + ' · ' + (D.pianeti.find(p => p.id === L.pianeta) || {}).sub),
-        el('h4', {}, ap ? L.titolo : 'Voce sigillata'));
-      if (ap) { it.append(el('div', { class: 'body' }, L.corpo), el('div', { class: 'clue' }, '▸ ' + L.indizio)); }
-      else it.append(el('div', { class: 'body' }, 'Scansiona il sigillo corrispondente per sbloccare questa voce.'));
+      it.append(el('div', { class: 'meta' }, ap ? L.sigillo + ' · ' + L.parola : 'voce sigillata'),
+        el('h4', {}, ap ? L.titolo : '— — —'));
+      if (ap) {
+        it.append(el('div', { class: 'body' }, L.corpo));
+        if (L.indizio) it.append(el('div', { class: 'clue' }, '▸ ' + L.indizio));
+      } else it.append(el('div', { class: 'body' }, 'Serve la parola giusta.'));
       lista.append(it);
     });
-    cont.textContent = S.log.length + ' / ' + D.log.length + ' voci sbloccate';
+    cont.textContent = S.log.length + ' / ' + D.log.length + ' voci aperte';
   };
-  const apri = code => {
-    const L = D.log.find(x => x.sigillo.toUpperCase() === code);
-    if (!L) { fb.className = 'err'; fb.textContent = '⚠ Sigillo non riconosciuto: ' + code; return; }
-    add('log', L.id); fb.className = 'ok'; fb.textContent = '✓ Sbloccata: ' + L.titolo; disegna();
+
+  const chiedi = parola => {
+    const p = parola.trim().toUpperCase();
+    if (!p) return;
+    const L = D.log.find(x => x.parola === p);
+    const costo = COSTO.consulta;
+    segna('consulta', p + (L ? ' · trovata' : ' · nulla'), costo);
+    if (!L) { fb.className = 'err';
+      fb.textContent = '⚠ L\u2019archivio non conosce «' + p + '». Persi ' + costo + ' minuto.'; return; }
+    if (S.log.includes(L.id)) { fb.className = 'hint';
+      fb.textContent = '«' + p + '» era gi\u00e0 stata usata: ' + L.titolo; disegna(); return; }
+    add('log', L.id); fb.className = 'ok';
+    fb.textContent = '✓ ' + L.titolo + ' — costo ' + costo + ' minuto'; disegna();
   };
-  const codeIn = el('input', { type: 'text', placeholder: 'LOG-01', autocapitalize: 'characters' });
-  const fb = el('p', { class: 'hint' }, 'Ogni voce sbloccata resta disponibile per tutta la serata.');
-  const cont = el('div', { class: 'eyebrow', style: 'margin:22px 0 10px' });
-  const [scanBtn, camBox] = scanner(apri);
-  app.append(scanBtn, camBox,
-    el('div', { class: 'card' },
-      el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Codice voce'), codeIn),
-      el('button', { class: 'big ghost', type: 'button', style: 'margin-top:12px',
-        onclick: () => apri(codeIn.value.trim().toUpperCase()) }, 'Sblocca voce'), fb),
+
+  const wIn = el('input', { type: 'text', placeholder: 'parola', autocapitalize: 'characters' });
+  wIn.addEventListener('keydown', e => { if (e.key === 'Enter') chiedi(wIn.value); });
+  app.append(
+    el('div', { class: 'card acc' },
+      el('div', { class: 'eyebrow', style: 'color:var(--ember)' }, 'Interroga l\u2019archivio'),
+      el('label', { class: 'fld', style: 'margin-top:10px' },
+        el('span', { class: 'lbl' }, 'Parola udita dal Decifratore'), wIn),
+      el('button', { class: 'big log-go', type: 'button', style: 'margin-top:12px',
+        onclick: () => chiedi(wIn.value) }, 'Cerca  ·  1 min'),
+      fb),
     cont, lista);
   disegna();
 };
@@ -502,7 +648,7 @@ V.log = () => {
 const PZ = {
  'S-P1': { rows:4, cols:4, start:[3,0], end:[0,3], dots:[],
    squares:[{r:0,c:0,k:'a'},{r:2,c:0,k:'a'},{r:0,c:2,k:'b'},{r:2,c:2,k:'b'}] },
- 'S-P2': { rows:5, cols:5, start:[4,0], end:[0,4], dots:[[3,1],[1,3]],
+ 'S-P2': { rows:5, cols:5, start:[4,0], end:[2,4], dots:[[2,2],[1,3]],
    squares:[{r:0,c:0,k:'a'},{r:1,c:1,k:'a'},{r:2,c:0,k:'a'},{r:3,c:1,k:'a'},
             {r:0,c:2,k:'b'},{r:1,c:3,k:'b'},{r:2,c:2,k:'b'},{r:3,c:3,k:'b'}] },
  'S-P3': { rows:5, cols:5, start:[4,2], end:[0,2], dots:[[2,0],[2,4]],
@@ -663,12 +809,42 @@ V.master = () => {
     el('div', { class: 'card cold' },
       el('div', { class: 'eyebrow', style: 'color:var(--cold)' }, 'Stato dei rilevatori su questo dispositivo'), stato),
     el('div', { class: 'card' },
+      el('div', { class: 'eyebrow' }, 'Costo riportato da un giocatore'),
+      el('p', { class: 'hint', style: 'margin:8px 0 10px' },
+        'Le app dei ruoli tirano da sole e dicono quanto e\u2019 costato. Scala qui il numero che ti riferiscono.'),
+      (() => {
+        const n = el('input', { type: 'text', inputmode: 'numeric', placeholder: 'minuti', style: 'text-align:center' });
+        const go = () => { const v = parseInt(n.value, 10);
+          if (!v || v < 1) return;
+          M.storia.push(v); M.min = Math.max(0, M.min - v);
+          roll.textContent = 'riportato dal tavolo \u2212' + v + ' min'; n.value = ''; dipingi(); };
+        n.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+        const w = el('div');
+        w.append(n, el('button', { class: 'big ghost', type: 'button', style: 'margin-top:10px', onclick: go }, 'Scala'));
+        return w;
+      })()),
+    el('div', { class: 'card' },
+      el('div', { class: 'eyebrow' }, 'Storico del loop'),
+      (() => {
+        const box = el('div', { style: 'margin-top:10px' });
+        const dis = () => { clear(box);
+          const st = (S.storico || []).slice(-12).reverse();
+          if (!st.length) { box.append(el('p', { class: 'hint', style: 'margin:0' },
+            'Nessuna azione registrata su questo dispositivo. Ogni app tiene il proprio storico.')); return; }
+          st.forEach(a => box.append(el('div', { style: 'display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px' },
+            el('span', { class: 'mono', style: 'color:var(--faint);flex:0 0 42px' }, a.q),
+            el('span', { style: 'flex:1;color:var(--dim)' }, a.c),
+            el('span', { class: 'mono', style: 'color:var(--ember)' }, '\u2212' + a.m))));
+        };
+        dis(); return box;
+      })()),
+    el('div', { class: 'card' },
       el('div', { class: 'eyebrow' }, 'Failsafe del narratore'),
       el('p', { class: 'hint', style: 'margin:8px 0 0' },
         'Se il gruppo si blocca, il tuo compito è far avanzare la trama: leggi tu il testo dal foglio chiavi e considera la stanza aperta. Le chiavi non sono in questa app di proposito — sono su CHIAVI-MASTER, stampato.'),
       el('button', { class: 'big ghost', type: 'button', style: 'margin-top:14px', onclick: () => {
           if (confirm('Azzerare tutti i progressi su QUESTO dispositivo?')) {
-            S = { testi: [], log: [], stanze: [], mecc: [], plain: {} }; save();
+            S = { testi: [], log: [], stanze: [], mecc: [], plain: {}, storico: [] }; save();
             M = { min: 30, loop: 1, storia: [] }; salvaM(); dipingi(); } } }, 'Azzera dispositivo')));
   dipingi();
 };
@@ -686,3 +862,5 @@ window.addEventListener('hashchange', () => go(location.hash.slice(1) || 'ruoli'
 go(location.hash.slice(1) || 'ruoli');
 
 </script>
+</body>
+</html>
