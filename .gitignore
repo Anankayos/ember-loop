@@ -1,0 +1,18 @@
+# ---- MAI PUBBLICARE ----
+# contenuti.md e contenuti.py contengono le chiavi di cifratura, i codici
+# stanza e TUTTI i testi in chiaro: sono il gioco intero.
+contenuti.md
+contenuti.py
+CHIAVI-MASTER.md
+.segreti
+
+# impianto di progetto: contiene la struttura completa, cioe' spoiler
+00-progetto.md
+
+# materiale di lavoro
+verifica_puzzle.py
+_casi.json
+push-log.txt
+diagnosi.txt
+diagnosi.ps1
+__pycache__/

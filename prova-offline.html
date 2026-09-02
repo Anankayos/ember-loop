@@ -1,0 +1,688 @@
+<title>The Ember Loop — Terminale di Rilevamento</title>
+<style>
+:root{
+  --bg:#0A0D13; --sur:#12171F; --sur2:#1A2030; --line:#242C3A;
+  --ink:#DFE5EF; --dim:#8B96A8; --faint:#5F6B7D;
+  --ember:#F08A4B; --ember-dk:#2A1710;
+  --cold:#79B2D0; --cold-dk:#0F212B;
+  --warm:#D9C26A; --warm-dk:#241F0E;
+  --bad:#E06A5A;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.55;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:620px;margin:0 auto;padding:18px 16px 80px}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:12px;padding:8px 0 20px;border-bottom:1px solid var(--line);margin-bottom:22px}
+header .mark{width:30px;height:30px;border-radius:50%;border:2px solid var(--ember);position:relative;flex:0 0 auto}
+header .mark::after{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--ember)}
+header h1{font-size:17px}
+header .sub{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+#back{margin-left:auto;background:none;border:1px solid var(--line);color:var(--dim);
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;padding:7px 12px;border-radius:4px;cursor:pointer}
+#back:hover,#back:focus-visible{border-color:var(--ember);color:var(--ember);outline:none}
+
+/* ---------- role cards ---------- */
+.roles{display:grid;gap:12px}
+.role{
+  display:block;width:100%;text-align:left;background:var(--sur);border:1px solid var(--line);
+  border-radius:6px;padding:18px;cursor:pointer;color:inherit;font:inherit;transition:border-color .15s
+}
+.role:hover,.role:focus-visible{border-color:var(--ember);outline:none}
+.role .n{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--ember);text-transform:uppercase}
+.role h3{font-size:19px;margin:6px 0 4px}
+.role p{margin:0;color:var(--dim);font-size:14px}
+.role.gm .n{color:var(--cold)}
+.role.gm:hover,.role.gm:focus-visible{border-color:var(--cold)}
+
+/* ---------- generic ---------- */
+.card{background:var(--sur);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
+.card.acc{border-color:var(--ember);background:var(--ember-dk)}
+.card.cold{border-color:var(--cold);background:var(--cold-dk)}
+button.big{
+  display:block;width:100%;padding:15px;border-radius:6px;border:1px solid var(--ember);
+  background:var(--ember-dk);color:var(--ember);font-family:var(--mono);font-size:13px;
+  letter-spacing:.14em;text-transform:uppercase;cursor:pointer;margin-bottom:12px
+}
+button.big:hover,button.big:focus-visible{background:var(--ember);color:#0A0D13;outline:none}
+button.ghost{background:none;border:1px solid var(--line);color:var(--dim)}
+button.ghost:hover,button.ghost:focus-visible{border-color:var(--dim);background:var(--sur2);color:var(--ink)}
+input[type=text]{
+  width:100%;padding:14px;border-radius:6px;border:1px solid var(--line);background:var(--bg);
+  color:var(--ink);font-family:var(--mono);font-size:16px;letter-spacing:.12em;text-transform:uppercase
+}
+input[type=text]:focus{outline:none;border-color:var(--ember)}
+label.fld{display:block;margin-bottom:8px}
+label.fld .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;display:block;margin-bottom:7px}
+.hint{color:var(--faint);font-size:13px;margin:10px 0 0}
+.err{color:var(--bad);font-size:13.5px;margin:10px 0 0;font-family:var(--mono)}
+.ok{color:var(--ember);font-size:13.5px;margin:10px 0 0;font-family:var(--mono)}
+
+/* ---------- scanner ---------- */
+#cam{position:relative;border-radius:6px;overflow:hidden;background:#000;margin-bottom:12px;display:none}
+#cam video{width:100%;display:block}
+#cam .ret{position:absolute;inset:14%;border:2px solid var(--ember);border-radius:8px;opacity:.85;
+  box-shadow:0 0 0 100vmax rgba(10,13,19,.55)}
+#cam .cap{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-family:var(--mono);
+  font-size:11px;letter-spacing:.12em;color:var(--ember)}
+
+/* ---------- glyphs ---------- */
+.glyphs{
+  font-family:var(--mono);font-size:19px;line-height:1.75;letter-spacing:.22em;color:var(--dim);
+  word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:14px;
+  max-height:190px;overflow:auto
+}
+.plain{white-space:pre-wrap;font-size:16.5px;line-height:1.7}
+.plain.rev{animation:rise .5s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.plain.rev{animation:none}}
+
+/* ---------- list ---------- */
+.item{border:1px solid var(--line);border-radius:6px;padding:14px;margin-bottom:10px;background:var(--sur)}
+.item.lock{opacity:.5;border-style:dashed}
+.item h4{margin:0 0 4px;font-size:15.5px;font-weight:600}
+.item .meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.item .body{white-space:pre-wrap;color:var(--dim);font-size:14px;margin-top:8px}
+.item .clue{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);color:var(--cold);font-size:13.5px}
+
+/* ---------- puzzle ---------- */
+#pz{touch-action:manipulation;display:block;width:100%;height:auto;background:var(--bg);
+  border:1px solid var(--line);border-radius:6px}
+.pzrow{display:flex;gap:10px;margin:12px 0}
+.pzrow button{flex:1;margin:0;padding:13px}
+
+/* ---------- master ---------- */
+.clock{font-family:var(--mono);font-size:15vw;line-height:1;text-align:center;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;padding:8px 0 4px}
+@media(min-width:620px){.clock{font-size:88px}}
+.clock.warn{color:var(--warm)}
+.clock.crit{color:var(--ember)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2 button{margin:0}
+.roll{font-family:var(--mono);font-size:13px;color:var(--warm);text-align:center;min-height:22px;letter-spacing:.1em}
+.chip{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;padding:3px 9px;
+  border-radius:3px;border:1px solid var(--line);color:var(--faint);margin:0 6px 6px 0;text-transform:uppercase}
+.chip.on{border-color:var(--ember);color:var(--ember);background:var(--ember-dk)}
+.hide{display:none!important}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="mark" aria-hidden="true"></div>
+    <div>
+      <h1 id="vt">The Ember Loop</h1>
+      <div class="sub" id="vs">Terminale di rilevamento</div>
+    </div>
+    <button id="back" class="hide" type="button">← Ruoli</button>
+  </header>
+  <main id="app"></main>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<script>
+// GENERATO DA contenuti.py — non modificare a mano
+window.DATI = {
+ "pianeti": [
+  {
+   "id": "P1",
+   "nome": "Il Pianeta dell'Amicizia",
+   "sub": "l'origine dei Kindler",
+   "meccanica": "PORTARE",
+   "mecc_desc": "Puoi far attraversare al reset un solo oggetto fisico. Ciò che tieni in mano quando arriva la luce, resta in mano.",
+   "colore": "ember",
+   "chiave_hash": "b0f4f4c9451f9129"
+  },
+  {
+   "id": "P2",
+   "nome": "Il Pianeta della Sofferenza",
+   "sub": "la divisione dei Kindler",
+   "meccanica": "PERCEPIRE",
+   "mecc_desc": "Puoi percepire ciò che sta oltre lo zero. Per pochi secondi, dopo la luce, continui a sentire.",
+   "colore": "cold",
+   "chiave_hash": "311f42e04adc76a6"
+  },
+  {
+   "id": "P3",
+   "nome": "Il Pianeta dell'Autonomia",
+   "sub": "la rinascita dei Kindler",
+   "meccanica": "SCEGLIERE",
+   "mecc_desc": "Puoi scegliere il minuto in cui ti svegli. Non accorci il loop: scegli dove entrarci.",
+   "colore": "warm",
+   "chiave_hash": "4d178183a3cabb3e"
+  }
+ ],
+ "testi": [
+  {
+   "id": "T-01",
+   "pianeta": "P1",
+   "titolo": "Prima registrazione",
+   "sigillo": "KNDL-01",
+   "cifra": "p9PPCAYCBQkBG4H4DRMGDAAVBgOD8jJ4odjKSxUhO2M8KShlNiY3LjYoKiogYyslNywgLC4iI2EpJWkwOykyNiVpMC4gIGU3LC01LWE3LT8sIyskNycgYz8tMyooKG1FRg8qKmkmPS03JCkmYzoiYTUrOSwjI29lATsiOS0sKmQtNipsJjcxOTMmbCItIWksLC80NSU/IiEjYSkraTA7KTI2K2kwPy07LCtlYy4gLSRkOjcqPzIkZC0qPDggKz4oYystLSklaSUgIjUgZC0qbyA0JiFlYz8pM2U1PCI7ODMqZCoqLCAoZSg8LSgkKGUlJWMoJS43KiZtRUYRKi1lYyYiYTAqaS4uODUsKiZjPjkgKTEnMjopbWUnIGMpKTMoJSQuIGwkKzA7IiIuKGUgKDUuIjUsZCgvIy1hNjAsMDwtYTMhPTEmIiBlICBjLiIvMCoqKmFGSwshOjA6Ii5lNiAgID4lJGQqLDwtYSMxaScqODUqamkXOjg1LGQ7KiwjMyElJyxvLykgZC8iLCksKCtpNy4+JSxoaSZvLykgZCcsIWwiIGQnJm8lLDUrOzeM/mErLSwtOylvT04NIm89NCAoaSQmIzMrK2klOiEsKmQ8LW88LjUrJSxvPy4pK2c="
+  },
+  {
+   "id": "T-02",
+   "pianeta": "P1",
+   "titolo": "Sulla misura del tempo",
+   "sigillo": "KNDL-02",
+   "cifra": "p9PPCAYCBQkBG4H4DRMGDAAVBgOD8jJ4odjKSwYrJzcuISwqZC4vJmwgKyogYy5sMSQ2PSo9KWEhJSVjIi01MS0nLG8oJCkoKGM5KTU3LSciY2wkZSomLW8oICkoKGM/PigoJWk1ICA1JGQqKypsIixkPyYrKSwoK2dJRR00IDc9LG8vLisiPDAqbChlKiYwOz4oZSU7ICclNyw3PSpvPCQ3ZC4mISkzJD4gLCElb2UILGMrOSRlICg3KmwlLDc9IiEjYTYhIGM9IzUkPiAsISVvT04FIm8/MSwhLiI1JS4rIWmA52wyICk5LyYvJGUhaS0qPzIwKiZjIy1hNic7Kjw/JGUpKCpjbDEgNiorjOVhJGQ9Njs4KGU3LC4tPiAzJWksOTooJH5DJjwlMjEhOyZvIiQpKCZjPDgkNjcmYz8jMjEraS0gImGG7GkqIS8uKzA7Ij0/KGs="
+  },
+  {
+   "id": "T-03",
+   "pianeta": "P2",
+   "titolo": "La frattura",
+   "sigillo": "KNDL-03",
+   "cifra": "sdjBBwAPFwMCHov2Eh0EBAAXGgCF+z9wsdjBRgUgcyk1LT01Jj0mbCcuPW8iLiskczopbCouPz8iOiYtNmFnHTwkIDsobCUgcz0iPyxhIyaE9WklOikhJSooPypnKChhISY3LTsgISprbCcuPW83JYr4cykmLyAtNmFNRhwvPG8jJWkvPCZnPyBhNSo1IYrzfW8AICBhMiMzPiBhPSApbCwvJz0mPiYvPGFNRggzISYxLSQsPG8hJScucy4rIChhICAgICAgcyIoID0kczkoID0kfW8TIzsvMiIqI2koPSsuKT0zPG8mID0zNjszLSc1NmFnACxhJz0mLyokcysubCg3JSYkJScgPiopOCZhICApI2klPCwyISwvJy4zKWkyJm8zOT01PG8uIGkiPD01JS0uOiBnKTo1Nj0pI3JhJz0mLyokcysubCAvND0iPzouf28pKToyJiEmYkNLECZnKCAiNiIqI2kiOypnKTsgcz8iPmkvPCFnKCAyJzo1LigzNmFNCTsgcyMmbDoiJjwmbDkokPZnLyYsPCsmbCopNm8mOiwyICYqI2c="
+  },
+  {
+   "id": "T-04",
+   "pianeta": "P2",
+   "titolo": "Sull'architettura di questo luogo",
+   "sigillo": "KNDL-04",
+   "cifra": "sdjBBwAPFwMCHov2Eh0EBAAXGgCF+z9wsdjBRgopOm8xJTooJy5nPTwkIDsobDkoMiEiOChhPSAzLWkxISo0OCZhMCcibCYmPSZnPCwzMCA1PyZhMCApKDwiNm8mICUgczwzKToyMm8kLSQkIS5pRkMPPCFnj+FhJiFnKTszPD0ibC0ocywoPz0zJjUuIyckfW+ExGktdDopJSogcywoPyhhMCcibCgjMSYmISZhMCA0ODs0OjsobC0ocz81IzkuICYzI2dLWQNgOToiOjsmbCcuPW80JWk1ISAxLWkgPyMoIj0gPS4pKCYyOm8jLWkwJiorIChhMC4qKTsgfUUUJWk1ISAxLWkgJzs1LT8kITwmIi0uPy5p"
+  },
+  {
+   "id": "T-05",
+   "pianeta": "P3",
+   "titolo": "Il ritorno",
+   "sigillo": "KNDL-05",
+   "cifra": "oNLUDAgDCxgRHYDyExUCBQYCHQCA8iR2o9rJXgAgMCszKiwiY3Q5LmIrPSlhKiM9dDw2ICE0KGNFXhsoLDA8KGE9ICYgLjQkcigzLG8hOi5iNiYmLzcudCQ9LTUgLiBhbz06byEwO2cmISZ0NSM2NztnLyIhdDEhNjczMSAjIHp0GycoNzEgICB0NycnZSMyJD47O3QpLTYhImEkI3QmKjEsNjIubSsxOCMjZTQ1IDk7ISYubE9YAjMsbz06OScmN2ctLG8kJiYvJHIkLj4udCcuLCRyJCkobzc9byQqITQkbSw1JCY2JCYme20qJjU5Iyg9ZzA4LiAgPS1pciJhKyY6NSMvIDwzJG0qJjU5Iyg9ZyAjLDwxbzMwMzM1PyB0JCowNj0pJGNFXgU6Jyk+JmE+KiY1bzY3PTEgICI7dDosJHI3Lj87NXQsKiByKS4jbyc9byM1IITtY28XNSIvLDwmLCAgdCIqLDE7ZywkISEgJmxlBjUuOy45OSBiKXUmLTk9NXpFSAkzZzEiPSA1byEtOzIyLG+X/G8uYicpKC4gdDkgNiwkKGE9KiZ0LDcscjMzIjk1OSItZSMyJCEjNXQoKzAhMyBj"
+  },
+  {
+   "id": "T-06",
+   "pianeta": "P3",
+   "titolo": "Frammento ricorrente",
+   "sigillo": "KNDL-06",
+   "cifra": "oNLUDAgDCxgRHYDyExUCBQYCHQCA8iR2o9rJXh0hISwhKGE+OnQgOjYxO2ckbTsmMW8rZSIuICMqID1jYjU7hPhtJjp0PzAqNCgvKSYgl+9iITtnLiohPXQuLjEgJmEuICc1dUhPkOwXAgZ0Eg4WAHIWFAgDGBtvAQ0XZxcCAxEACmxlGwhhBQB0HQNiCBsIYQ4AGQQOBQsdag4KCBEAGw1rkPxLRwZ0OiAxMSAuYSw9NzwmNCwhMyhtIzt0LC4kITQoKyY3NT0tKz1nIG0jITooLWUxKCwobzA9LCosMzUgNyY7OipiITtnIDg7Oyc6JCM7JCgoIS41Y2IgcjY0JCEwPW8hKj8iYT09PTkgYjY3IC8ibzAxIy4kciEzLDsgIT0ja1hNEiRvJzYuJSk7JjcsITt0KytlISIvPiB4dCEtK3IjKG0jMSA7JzczaUsDIDp0jOplPyYobTwgNTstZScpYSAgMDtvMiAgZyAjKzUmPCcrN2lhjsd0PSNiNicoYSAgMDtvJixyNSQ+OzUmKmIrNystLG8nIC4sPzNp"
+  },
+  {
+   "id": "T-FINALE",
+   "pianeta": "FIN",
+   "titolo": "Ultima registrazione",
+   "sigillo": "KNDL-00",
+   "cifra": "tsXDBR0PEB4AHJb2FQAGBh0XHR2H+SJwtsXDRAckdCExLz1hODciKTEvMD1lPyEkJyYqYnQpNTtlIjFhICAgbjkkNzEkID0iPDdpbjFhJScsIDAodCEgJ3QzPT8kPSAudD0pOiYkdD4kbjg0NzdrbgAodDYqLDYoNT8qbjA0MXI2Pj0kMzM/JzsvPXxPRBgAdAIXBxkAenILITphJyYkJ3QmITM3KjUvMD1lOzogdCExKzgtNXImJjFhOScqPDFvdAExLz1hMyckPDAgOjYqbiEvNXI2OjEtODNlLTwkdCEsbjUiNzcrKjFvdB0iID1hIj0pOjVhNzogbjczMTYgOD1hMDtlIzszPSAgYnQyIDMzJ3QgJyEsPSAkOjYqbjVhITxlJzooLjsqYnQlNT4pL3QxNSAxK3QyNjMiIj0gIDNrRF4NNXI2OjEtODNlKyYgdDUsjfRhOJHpYnQxJjsoL3phEiAgKjAgeHIrKzgtNXI2OjEyJzNlPSAgOigkYnQxMSBlPTEodCAqOjU7PT0rJ3phGjc2PSEvO3IpL3QiOzwxLyIgdCIgPDcpl/tlIDsvdDYkODVhOCcmK3phFz0rOjUzMXIpaTUiNzcrPT0uOjdlK3QvOzxlInMkJzs2OjEvLjNljfxhJyYkOjthPT5lIDsyICAqbiEvPTEqbjEzJj03K3QlPXIkPDcpPSQsIXhhMXIpIXQgNjAsLzkudD4kPTcoNSYqbjcuJ5HpYF5LGBNlHRECGxwBD3hhNzogbpfpdD4kbjAuOTMrKjVhNzogbiAodCEgJ3QnNSYxIXQlNT5lPiYoOT1lIjsuJHxlHjEzNzqG53QwITc2OjthJzs2OjEsNXI2J3QzPSIgOjFvXlgVKyYiPJHsbjouOnI2JzUsO3I3JyEyNzsxJ3QgdDEqICckJiQkPDFhPT5lPD0iOyAhIXQlPXI0OzEtdD8kOiAoOj1rbhcodDMnLD0gOT1lPiYuIjMxIXQiOzxlKTgodDM3LTwoIjtpbjcuOnIpK3QoOjEsPT0uOjtpbjcuOnIsbiYkMzs2OiYobnIwIHQzPTEqPDAudCAkLTcuOiYkOjthOj0rbpfpdDspbjkgICYsIDtvdBMpIjszNXIkLDYoNT8qbicsMSE2IXQlPXImIToyMSAzLyYkdDspbiYoNz03KjthMXIkLDYoNT8qbjcuOiEgPCIgID1lJzhhOTMxOj0vO3xPRB0tdD4qISRhMCc3L3Q1JjcrOjVhOTsrOyAodCIgPDcpl/tlOiYkOiYkbjkoOicxJ3SC/HI0OzUvID1lKiEzl+BrRF4IOHIxKzkxO3I2LTszJjdlLzhhNz0rOiYgJjsqbiQkJjEtjf1hOj0rbic1PTMoIXQgJyIgOiAgOjYqbjggdDQsIDFvdAExJzUsO3I3JzU3Ij0pKTEvMD1lODEzJz1lInMoOjs/JzttdDdlIjthJjsjLzciPTMoIXQlNXIkIjguJjNpbiQkJnImJj00OiMwK3Q1OyArJ3QgdCQgKjEzOD1rRF4VISYxIXSC/HInKzokdDEsjeZhNzogbjIoOjs2LTFvXhdlOiE1ID1lLT2C5nImJjFhNz0oJzoiPTNr"
+  }
+ ],
+ "log": [
+  {
+   "id": "L-01",
+   "pianeta": "P1",
+   "sigillo": "LOG-01",
+   "titolo": "Rilevamento superficie · P1",
+   "corpo": "Sala rettangolare. Sedute disposte in griglia. Due individui registrati alla stessa distanza dalla fonte di luce.\nNessuna interazione registrata per l'intera durata dello strato.",
+   "indizio": "Lo strato è anteriore all'accensione di S-0. Il corpo centrale risulta presente ma freddo."
+  },
+  {
+   "id": "L-02",
+   "pianeta": "P1",
+   "sigillo": "LOG-02",
+   "titolo": "Anomalia di catalogazione",
+   "corpo": "Ogni riferimento a S-0 negli strati anteriori a T-01 è al tempo FUTURO.\nOgni riferimento negli strati posteriori è al PASSATO.",
+   "indizio": "La commutazione avviene esattamente al mattino della vetrina. Chiave suggerita dal contesto: il luogo dove ci si fermò."
+  },
+  {
+   "id": "L-03",
+   "pianeta": "P2",
+   "sigillo": "LOG-03",
+   "titolo": "Corridoi esterni",
+   "corpo": "Tracce di avvicinamento ripetuto. Nessuna traccia di ingresso.\nGli individui esterni arrivano fino a un punto preciso e tornano indietro. Ripetutamente, per l'intera durata dello strato.",
+   "indizio": "Il punto preciso ha un nome nella lingua Kindler. È la parola che apre lo strato."
+  },
+  {
+   "id": "L-04",
+   "pianeta": "P2",
+   "sigillo": "LOG-04",
+   "titolo": "Conteggio delle occupazioni",
+   "corpo": "Ultima occupazione registrata della sala grande: quattro individui.\nOgni occupazione successiva: tre.\nIl conteggio non risale mai.",
+   "indizio": "Nessuno lasciò il gruppo. Uno solo smise di essere contato."
+  },
+  {
+   "id": "L-05",
+   "pianeta": "P3",
+   "sigillo": "LOG-05",
+   "titolo": "Indice nominale parziale",
+   "corpo": "Designazioni ricorrenti nell'archivio, per frequenza:\nBERG (strati I-IX) · POM (I-IX) · ANDREA (I-IX)\nBERGOTTO (III-VI) · SNIUNZI (V-VII)\n[non attribuito] — mai come soggetto, presente in ogni strato come mano.",
+   "indizio": "Sei designazioni. Tre compaiono ovunque. Due compaiono e scompaiono senza sostituire nessuno. La sesta non è mai soggetto. Quanti erano davvero?"
+  },
+  {
+   "id": "L-06",
+   "pianeta": "P3",
+   "sigillo": "LOG-06",
+   "titolo": "Camera risolta",
+   "corpo": "Quattro individui, seduti, per una durata superiore a qualunque altra registrazione del sistema.\nNessuna attività. Nessuno spostamento. Solo durata.\nIscrizione a parete: «BUONA QUESTA BEVANDA AL FRUTTO.»",
+   "indizio": "Il termine per il frutto e una delle designazioni nominali dell'archivio condividono la stessa radice. Coincidenza non verificabile. È anche la chiave di questo strato."
+  }
+ ],
+ "stanze": [
+  {
+   "id": "S-P1",
+   "pianeta": "P1",
+   "nome": "La Sala Comune",
+   "codice": "VETRINA",
+   "sblocca": "Rivela T-01 e la meccanica PORTARE."
+  },
+  {
+   "id": "S-P2",
+   "pianeta": "P2",
+   "nome": "La Camera Centrale",
+   "codice": "CORRIDOIO",
+   "sblocca": "Rivela T-03 e la meccanica PERCEPIRE."
+  },
+  {
+   "id": "S-P3",
+   "pianeta": "P3",
+   "nome": "L'Osservatorio",
+   "codice": "PORTA",
+   "sblocca": "Rivela T-05 e la meccanica SCEGLIERE."
+  },
+  {
+   "id": "S-FIN",
+   "pianeta": "FIN",
+   "nome": "Il Cuore del Sistema",
+   "codice": "ACCENSIONE",
+   "sblocca": "Con le tre meccaniche: resti oltre la luce e vedi l'accensione."
+  }
+ ],
+ "fin_hash": "dda7f7007188815d"
+};
+
+</script>
+<script>
+/* The Ember Loop — terminale di rilevamento
+   Nessuna chiave di cifratura è presente in questo file né in dati.js. */
+'use strict';
+const D = window.DATI, app = document.getElementById('app'),
+      back = document.getElementById('back'), vt = document.getElementById('vt'), vs = document.getElementById('vs');
+const el = (t, a = {}, ...kids) => { const n = document.createElement(t);
+  for (const k in a) k === 'html' ? n.innerHTML = a[k] : k.startsWith('on') ? n.addEventListener(k.slice(2), a[k]) : n.setAttribute(k, a[k]);
+  kids.flat().forEach(c => n.append(c && c.nodeType ? c : document.createTextNode(c))); return n; };
+const clear = n => { while (n.firstChild) n.removeChild(n.firstChild); };
+
+/* ---------------- stato locale (per dispositivo) ---------------- */
+const SK = 'emberloop.v1';
+let S = { testi: [], log: [], stanze: [], mecc: [], plain: {} };
+try { Object.assign(S, JSON.parse(localStorage.getItem(SK) || '{}')); } catch (e) {}
+const save = () => { try { localStorage.setItem(SK, JSON.stringify(S)); } catch (e) {} };
+const add = (k, v) => { if (!S[k].includes(v)) { S[k].push(v); save(); } };
+
+/* ---------------- decifratura ---------------- */
+const MARCA = '\u25c6KINDLER\u00b7ARCHIVIO\u00b7v1\u25c6\n';
+function decifra(b64, chiave) {
+  const raw = atob(b64), k = new TextEncoder().encode(chiave.toUpperCase());
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i) ^ k[i % k.length];
+  const t = new TextDecoder('utf-8', { fatal: true }).decode(out); // chiave errata -> lancia
+  if (!t.startsWith(MARCA)) throw new Error('marcatore assente'); // chiave errata ma UTF-8 valido
+  return t.slice(MARCA.length);
+}
+const prova = (b64, k) => { try { return decifra(b64, k); } catch (e) { return null; } };
+
+/* ---------------- glifi Kindler (deterministici dal sigillo) ---------------- */
+const GL = '▲▼◆◇○●□■△▽◁▷◀▶┌┐└┘├┤┬┴┼─│╱╲╳⌐¬±∴∵≈≠≡⊂⊃⊕⊗⌂'.split('');
+function glifi(seme, n) {
+  let h = 2166136261;
+  for (const ch of seme) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  let s = '';
+  for (let i = 0; i < n; i++) { h ^= h << 13; h >>>= 0; h ^= h >> 17; h ^= h << 5; h >>>= 0;
+    s += GL[h % GL.length]; if (i % 5 === 4) s += ' '; }
+  return s;
+}
+
+/* ---------------- scanner QR ---------------- */
+const Cam = {
+  stream: null, raf: 0,
+  async start(box, onCode) {
+    const v = box.querySelector('video'), cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    } catch (e) { return false; }
+    v.srcObject = this.stream; v.setAttribute('playsinline', ''); v.muted = true; await v.play();
+    box.style.display = 'block';
+    const tick = () => {
+      if (v.readyState === v.HAVE_ENOUGH_DATA) {
+        const w = Math.min(520, v.videoWidth); const sc = w / v.videoWidth;
+        cv.width = w; cv.height = v.videoHeight * sc;
+        cx.drawImage(v, 0, 0, cv.width, cv.height);
+        const d = cx.getImageData(0, 0, cv.width, cv.height);
+        const r = window.jsQR && jsQR(d.data, d.width, d.height, { inversionAttempts: 'dontInvert' });
+        if (r && r.data) { this.stop(box); onCode(r.data.trim().toUpperCase()); return; }
+      }
+      this.raf = requestAnimationFrame(tick);
+    };
+    tick(); return true;
+  },
+  stop(box) {
+    cancelAnimationFrame(this.raf);
+    if (this.stream) { this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
+    if (box) { box.style.display = 'none'; const v = box.querySelector('video'); if (v) v.srcObject = null; }
+  }
+};
+function scanner(onCode) {
+  const box = el('div', { id: 'cam' }, el('video', { playsinline: '' }),
+    el('div', { class: 'ret' }), el('div', { class: 'cap' }, 'inquadra il sigillo'));
+  const b = el('button', { class: 'big', type: 'button', onclick: async () => {
+      if (Cam.stream) { Cam.stop(box); b.textContent = '⌘  Scansiona sigillo'; return; }
+      b.textContent = 'Avvio fotocamera…';
+      const ok = await Cam.start(box, c => { b.textContent = '⌘  Scansiona sigillo'; onCode(c); });
+      b.textContent = ok ? '✕  Chiudi fotocamera' : 'Fotocamera non disponibile — usa il codice';
+    } }, '⌘  Scansiona sigillo');
+  return [b, box];
+}
+
+/* ---------------- viste ---------------- */
+const V = {};
+
+V.ruoli = () => {
+  back.classList.add('hide'); vt.textContent = 'The Ember Loop'; vs.textContent = 'Terminale di rilevamento';
+  const R = [
+    ['01', 'decifra', 'Il Decifratore', 'Scansiona i sigilli Kindler e apri i testi cifrati. Serve la chiave giusta.'],
+    ['02', 'log', 'Il Consultatore', 'Sblocca le voci del diario di bordo e tieni insieme gli indizi.'],
+    ['03', 'stanze', "L'Apritore", 'Risolvi gli enigmi di percorso per aprire le stanze sulle mappe.']
+  ];
+  clear(app);
+  app.append(el('p', { class: 'hint', style: 'margin:0 0 18px' },
+    'Tre rilevatori, tre terminali. Ognuno apre ciò che gli altri non possono.'));
+  const g = el('div', { class: 'roles' });
+  R.forEach(([n, id, t, d]) => g.append(el('button', { class: 'role', type: 'button', onclick: () => go(id) },
+    el('div', { class: 'n' }, 'Ruolo ' + n), el('h3', {}, t), el('p', {}, d))));
+  g.append(el('button', { class: 'role gm', type: 'button', onclick: () => go('master') },
+    el('div', { class: 'n' }, 'Master'), el('h3', {}, 'Console di Sistema'),
+    el('p', {}, 'Cronometro del loop, costi in minuti, stato dei tre pianeti. Solo per il narratore.')));
+  app.append(g);
+};
+
+/* ---- 01 · DECIFRATORE ---- */
+V.decifra = () => {
+  vt.textContent = 'Decifratore'; vs.textContent = 'Software di decifrazione testi';
+  clear(app);
+  const out = el('div');
+  const codeIn = el('input', { type: 'text', placeholder: 'KNDL-01', inputmode: 'text', autocapitalize: 'characters' });
+  const msg = el('p', { class: 'hint' }, 'Se la fotocamera non parte (o apri il file in locale), digita il codice del sigillo. La chiave te la d\u00e0 il Master o la trovi nel diario.');
+  const apri = code => {
+    const t = D.testi.find(x => x.sigillo.toUpperCase() === code);
+    if (!t) { clear(out); out.append(el('p', { class: 'err' }, '⚠ Sigillo non riconosciuto: ' + code)); return; }
+    mostraTesto(out, t);
+  };
+  const [scanBtn, camBox] = scanner(apri);
+  app.append(scanBtn, camBox,
+    el('div', { class: 'card' },
+      el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Codice sigillo'), codeIn),
+      el('button', { class: 'big ghost', type: 'button', style: 'margin-top:12px',
+        onclick: () => apri(codeIn.value.trim().toUpperCase()) }, 'Apri reperto'),
+      msg),
+    out);
+};
+
+function mostraTesto(out, t) {
+  clear(out);
+  const pia = D.pianeti.find(p => p.id === t.pianeta);
+  const box = el('div', { class: 'card' });
+  box.append(el('div', { class: 'eyebrow' }, t.sigillo + (pia ? ' · ' + pia.sub : ' · registrazione terminale')),
+    el('h3', { style: 'margin:6px 0 12px;font-size:19px' }, t.titolo));
+  if (S.testi.includes(t.id)) { rivela(box, t); out.append(box); return; }
+  box.append(el('div', { class: 'glyphs' }, glifi(t.sigillo, 130)));
+  const kIn = el('input', { type: 'text', class: 'k-in', placeholder: 'chiave', autocapitalize: 'characters' });
+  const fb = el('p', { class: 'hint' }, 'La chiave si trova nel diario di bordo o dietro un enigma.');
+  const tenta = () => {
+    const k = kIn.value.trim();
+    if (!k) return;
+    const p = prova(t.cifra, k);
+    if (p) { S.plain[t.id] = p; add('testi', t.id); save(); rivela(box, t, true); }
+    else { fb.className = 'err'; fb.textContent = '⚠ La chiave non tiene. Il testo resta illeggibile.'; kIn.value = ''; }
+  };
+  kIn.addEventListener('keydown', e => { if (e.key === 'Enter') tenta(); });
+  box.append(el('label', { class: 'fld', style: 'margin-top:14px' }, el('span', { class: 'lbl' }, 'Chiave di decifrazione'), kIn),
+    el('button', { class: 'big k-go', type: 'button', style: 'margin-top:12px', onclick: tenta }, 'Decifra'), fb);
+  out.append(box);
+}
+function rivela(box, t, anim) {
+  clear(box);
+  const pia = D.pianeti.find(p => p.id === t.pianeta);
+  box.className = 'card acc';
+  box.append(el('div', { class: 'eyebrow', style: 'color:var(--ember)' }, t.sigillo + ' \u00b7 decifrato'),
+    el('h3', { style: 'margin:6px 0 12px;font-size:19px' }, t.titolo),
+    el('div', { class: 'plain' + (anim ? ' rev' : '') }, S.plain[t.id] || ''));
+  if (pia) {
+    const nuova = !S.mecc.includes(pia.meccanica);
+    if (nuova) add('mecc', pia.meccanica);
+    box.append(el('div', { class: 'card cold', style: 'margin:16px 0 0' },
+      el('div', { class: 'eyebrow', style: 'color:var(--cold)' }, nuova ? 'Meccanica acquisita' : 'Meccanica gi\u00e0 in tuo possesso'),
+      el('h3', { style: 'margin:6px 0 6px;font-size:17px;color:var(--cold)' }, pia.meccanica),
+      el('p', { style: 'margin:0;font-size:14px;color:var(--dim)' }, pia.mecc_desc)));
+  }
+}
+
+/* ---- 02 · CONSULTATORE DEL LOG ---- */
+V.log = () => {
+  vt.textContent = 'Consultatore'; vs.textContent = 'Diario di bordo · archivio indizi';
+  clear(app);
+  const lista = el('div');
+  const disegna = () => { clear(lista);
+    D.log.forEach(L => {
+      const ap = S.log.includes(L.id);
+      const it = el('div', { class: 'item' + (ap ? '' : ' lock') });
+      it.append(el('div', { class: 'meta' }, L.sigillo + ' · ' + (D.pianeti.find(p => p.id === L.pianeta) || {}).sub),
+        el('h4', {}, ap ? L.titolo : 'Voce sigillata'));
+      if (ap) { it.append(el('div', { class: 'body' }, L.corpo), el('div', { class: 'clue' }, '▸ ' + L.indizio)); }
+      else it.append(el('div', { class: 'body' }, 'Scansiona il sigillo corrispondente per sbloccare questa voce.'));
+      lista.append(it);
+    });
+    cont.textContent = S.log.length + ' / ' + D.log.length + ' voci sbloccate';
+  };
+  const apri = code => {
+    const L = D.log.find(x => x.sigillo.toUpperCase() === code);
+    if (!L) { fb.className = 'err'; fb.textContent = '⚠ Sigillo non riconosciuto: ' + code; return; }
+    add('log', L.id); fb.className = 'ok'; fb.textContent = '✓ Sbloccata: ' + L.titolo; disegna();
+  };
+  const codeIn = el('input', { type: 'text', placeholder: 'LOG-01', autocapitalize: 'characters' });
+  const fb = el('p', { class: 'hint' }, 'Ogni voce sbloccata resta disponibile per tutta la serata.');
+  const cont = el('div', { class: 'eyebrow', style: 'margin:22px 0 10px' });
+  const [scanBtn, camBox] = scanner(apri);
+  app.append(scanBtn, camBox,
+    el('div', { class: 'card' },
+      el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Codice voce'), codeIn),
+      el('button', { class: 'big ghost', type: 'button', style: 'margin-top:12px',
+        onclick: () => apri(codeIn.value.trim().toUpperCase()) }, 'Sblocca voce'), fb),
+    cont, lista);
+  disegna();
+};
+
+/* ---- 03 · APRITORE DELLE STANZE (enigmi di percorso) ---- */
+const PZ = {
+ 'S-P1': { rows:4, cols:4, start:[3,0], end:[0,3], dots:[],
+   squares:[{r:0,c:0,k:'a'},{r:2,c:0,k:'a'},{r:0,c:2,k:'b'},{r:2,c:2,k:'b'}] },
+ 'S-P2': { rows:5, cols:5, start:[4,0], end:[0,4], dots:[[3,1],[1,3]],
+   squares:[{r:0,c:0,k:'a'},{r:1,c:1,k:'a'},{r:2,c:0,k:'a'},{r:3,c:1,k:'a'},
+            {r:0,c:2,k:'b'},{r:1,c:3,k:'b'},{r:2,c:2,k:'b'},{r:3,c:3,k:'b'}] },
+ 'S-P3': { rows:5, cols:5, start:[4,2], end:[0,2], dots:[[2,0],[2,4]],
+   squares:[{r:0,c:0,k:'a'},{r:3,c:1,k:'a'},{r:1,c:1,k:'a'},
+            {r:0,c:3,k:'b'},{r:3,c:3,k:'b'},{r:1,c:2,k:'b'}] },
+ 'S-FIN':{ rows:5, cols:5, start:[4,2], end:[0,2], dots:[[2,0],[2,4],[4,0]],
+   squares:[{r:0,c:0,k:'a'},{r:1,c:1,k:'a'},{r:3,c:0,k:'a'},{r:2,c:1,k:'a'},
+            {r:0,c:3,k:'b'},{r:1,c:2,k:'b'},{r:3,c:3,k:'b'},{r:2,c:3,k:'b'}] },
+};
+const key = n => n[0] + ',' + n[1];
+function lati(path) { const E = new Set();
+  for (let i = 0; i < path.length - 1; i++) { const a = key(path[i]), b = key(path[i+1]); E.add(a < b ? a + '|' + b : b + '|' + a); }
+  return E; }
+function risolto(P, path) {
+  if (path.length < 2) return false;
+  if (key(path[0]) !== key(P.start) || key(path[path.length-1]) !== key(P.end)) return false;
+  if (!P.dots.every(d => path.some(n => n[0] === d[0] && n[1] === d[1]))) return false;
+  const E = lati(path), R = P.rows - 1, C = P.cols - 1, has = (a, b) => {
+    const x = key(a), y = key(b); return E.has(x < y ? x + '|' + y : y + '|' + x); };
+  const vis = new Set(), q = {};
+  P.squares.forEach(s => q[s.r + ',' + s.c] = s.k);
+  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+    if (vis.has(r + ',' + c)) continue;
+    const pila = [[r, c]], col = new Set(); vis.add(r + ',' + c);
+    while (pila.length) { const [cr, cc] = pila.pop();
+      if (q[cr + ',' + cc]) col.add(q[cr + ',' + cc]);
+      const push = (nr, nc) => { if (nr >= 0 && nr < R && nc >= 0 && nc < C && !vis.has(nr + ',' + nc)) { vis.add(nr + ',' + nc); pila.push([nr, nc]); } };
+      if (cc + 1 < C && !has([cr, cc+1], [cr+1, cc+1])) push(cr, cc+1);
+      if (cc - 1 >= 0 && !has([cr, cc], [cr+1, cc])) push(cr, cc-1);
+      if (cr + 1 < R && !has([cr+1, cc], [cr+1, cc+1])) push(cr+1, cc);
+      if (cr - 1 >= 0 && !has([cr, cc], [cr, cc+1])) push(cr-1, cc);
+    }
+    if (col.size > 1) return false;
+  }
+  return true;
+}
+function disegnaPuzzle(P, path, svg) {
+  const U = 62, PAD = 34, W = (P.cols - 1) * U + PAD * 2, H = (P.rows - 1) * U + PAD * 2;
+  const X = c => PAD + c * U, Y = r => PAD + r * U;
+  const NS = 'http://www.w3.org/2000/svg', mk = (t, a) => { const n = document.createElementNS(NS, t);
+    for (const k in a) n.setAttribute(k, a[k]); return n; };
+  clear(svg); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  P.squares.forEach(s => svg.append(mk('rect', { x: X(s.c) + 16, y: Y(s.r) + 16, width: U - 32, height: U - 32, rx: 5,
+    fill: s.k === 'a' ? '#DFE5EF' : '#0A0D13', stroke: s.k === 'a' ? '#DFE5EF' : '#8B96A8', 'stroke-width': 2 })));
+  for (let r = 0; r < P.rows; r++) for (let c = 0; c < P.cols; c++) {
+    if (c + 1 < P.cols) svg.append(mk('line', { x1: X(c), y1: Y(r), x2: X(c+1), y2: Y(r), stroke: '#242C3A', 'stroke-width': 9, 'stroke-linecap': 'round' }));
+    if (r + 1 < P.rows) svg.append(mk('line', { x1: X(c), y1: Y(r), x2: X(c), y2: Y(r+1), stroke: '#242C3A', 'stroke-width': 9, 'stroke-linecap': 'round' }));
+  }
+  if (path.length > 1) svg.append(mk('polyline', { points: path.map(n => X(n[1]) + ',' + Y(n[0])).join(' '),
+    fill: 'none', stroke: '#F08A4B', 'stroke-width': 11, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+  svg.append(mk('circle', { cx: X(P.start[1]), cy: Y(P.start[0]), r: 13, fill: path.length ? '#F08A4B' : '#5F6B7D' }));
+  svg.append(mk('circle', { cx: X(P.end[1]), cy: Y(P.end[0]), r: 9, fill: 'none', stroke: '#F08A4B', 'stroke-width': 4 }));
+  P.dots.forEach(d => svg.append(mk('polygon', { points: [[0,-8],[7,-4],[7,4],[0,8],[-7,4],[-7,-4]].map(p => (X(d[1])+p[0]) + ',' + (Y(d[0])+p[1])).join(' '),
+    fill: path.some(n => n[0]===d[0] && n[1]===d[1]) ? '#F08A4B' : '#79B2D0' })));
+  for (let r = 0; r < P.rows; r++) for (let c = 0; c < P.cols; c++) {
+    const hit = mk('circle', { cx: X(c), cy: Y(r), r: 22, fill: 'transparent', style: 'cursor:pointer' });
+    hit.dataset.n = r + ',' + c; svg.append(hit);
+  }
+}
+V.stanze = () => {
+  vt.textContent = 'Apritore'; vs.textContent = 'Enigmi di percorso · apertura stanze';
+  clear(app);
+  const sel = el('div', { class: 'roles' });
+  D.stanze.forEach(st => {
+    const fatto = S.stanze.includes(st.id);
+    sel.append(el('button', { class: 'role', type: 'button', onclick: () => enigma(st) },
+      el('div', { class: 'n' }, (D.pianeti.find(p => p.id === st.pianeta) || { sub: 'sistema' }).sub),
+      el('h3', {}, st.nome),
+      el('p', {}, fatto ? '✓ Aperta — codice ' + st.codice : 'Sigillata. Risolvi il percorso per aprirla.')));
+  });
+  app.append(el('p', { class: 'hint', style: 'margin:0 0 18px' },
+    'Traccia un percorso dal nodo pieno al nodo cerchiato. Separa i quadrati chiari dai quadrati scuri. Tocca i punti esagonali lungo la via. Tocca l\'ultimo nodo per tornare indietro.'), sel);
+};
+function enigma(st) {
+  const P = PZ[st.id]; let path = [];
+  clear(app);
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.id = 'pz';
+  const fb = el('p', { class: 'hint' }, 'Percorso vuoto.');
+  const ridisegna = () => { disegnaPuzzle(P, path, svg);
+    svg.querySelectorAll('[data-n]').forEach(h => h.addEventListener('click', () => {
+      const [r, c] = h.dataset.n.split(',').map(Number);
+      if (!path.length) { if (r === P.start[0] && c === P.start[1]) path = [[r, c]]; else { fb.className = 'err'; fb.textContent = '⚠ Parti dal nodo pieno.'; return; } }
+      else { const last = path[path.length - 1];
+        if (path.length > 1 && r === last[0] && c === last[1]) path.pop();
+        else if (Math.abs(r - last[0]) + Math.abs(c - last[1]) === 1 && !path.some(n => n[0] === r && n[1] === c)) path.push([r, c]);
+        else if (r === last[0] && c === last[1]) path = [];
+        else { fb.className = 'err'; fb.textContent = '⚠ Solo nodi adiacenti, e mai due volte lo stesso.'; return; } }
+      fb.className = 'hint'; fb.textContent = path.length + ' nodi.';
+      if (risolto(P, path)) {
+        add('stanze', st.id);
+        fb.className = 'ok'; fb.textContent = '';
+        esito.classList.remove('hide');
+      } else esito.classList.add('hide');
+      ridisegna();
+    }));
+  };
+  const esito = el('div', { class: 'card acc hide' },
+    el('div', { class: 'eyebrow', style: 'color:var(--ember)' }, 'Stanza aperta'),
+    el('h3', { style: 'margin:6px 0 10px;font-size:19px' }, st.nome),
+    el('p', { style: 'margin:0 0 4px;color:var(--dim);font-size:14px' }, st.sblocca),
+    el('p', { class: 'mono', style: 'margin:12px 0 0;font-size:26px;letter-spacing:.24em;color:var(--ember)' }, st.codice),
+    el('p', { class: 'hint', style: 'margin-top:6px' }, 'Comunica questo codice al Master per ricevere la carta-stanza.'));
+  app.append(svg,
+    el('div', { class: 'pzrow' },
+      el('button', { class: 'big ghost', type: 'button', onclick: () => { path = []; fb.textContent = 'Percorso vuoto.'; fb.className = 'hint'; esito.classList.add('hide'); ridisegna(); } }, 'Azzera'),
+      el('button', { class: 'big ghost', type: 'button', onclick: () => go('stanze') }, 'Indietro')),
+    fb, esito);
+  if (S.stanze.includes(st.id)) esito.classList.remove('hide');
+  ridisegna();
+}
+
+/* ---- MASTER · console di sistema ----
+   I 30 minuti sono un BUDGET, non un cronometro: ogni azione costa 1d4+1. */
+V.master = () => {
+  vt.textContent = 'Console di Sistema'; vs.textContent = 'Solo per il narratore';
+  clear(app);
+  let M = { min: 30, loop: 1, storia: [] };
+  try { Object.assign(M, JSON.parse(localStorage.getItem('emberloop.master') || '{}')); } catch (e) {}
+  const salvaM = () => { try { localStorage.setItem('emberloop.master', JSON.stringify(M)); } catch (e) {} };
+
+  const clock = el('div', { class: 'clock mono' });
+  const sotto = el('div', { class: 'eyebrow', style: 'text-align:center;margin-bottom:4px' });
+  const roll = el('div', { class: 'roll' }, ' ');
+  const stato = el('div', { style: 'margin-top:6px' });
+
+  const dipingi = () => {
+    clock.textContent = M.min + "'";
+    clock.className = 'clock mono' + (M.min <= 5 ? ' crit' : M.min <= 12 ? ' warn' : '');
+    sotto.textContent = 'Loop ' + M.loop + ' · minuti rimasti nel loop';
+    clear(stato);
+    ['PORTARE', 'PERCEPIRE', 'SCEGLIERE'].forEach(m =>
+      stato.append(el('span', { class: 'chip' + (S.mecc.includes(m) ? ' on' : '') }, m)));
+    stato.append(el('div', { class: 'hint', style: 'margin-top:8px' },
+      S.mecc.length === 3 ? '▸ Tre meccaniche acquisite: possono restare oltre la luce. Sblocca Il Cuore del Sistema.'
+                          : '▸ ' + S.mecc.length + '/3 meccaniche. Servono tutte e tre per vedere l’accensione.'));
+    salvaM();
+  };
+  const spendi = etichetta => {
+    const d = 1 + Math.floor(Math.random() * 4), costo = d + 1;
+    M.storia.push(costo);
+    M.min = Math.max(0, M.min - costo);
+    roll.textContent = etichetta + ' → 1d4+1 = ' + d + '+1 = ' + costo + ' min';
+    if (M.min === 0) roll.textContent += '  ·  LUCE BIANCA';
+    dipingi();
+  };
+  const B = (t, lbl) => el('button', { class: 'big ghost', type: 'button', onclick: () => spendi(lbl) }, t);
+
+  app.append(el('div', { class: 'card' }, clock, sotto, roll,
+      el('div', { class: 'grid2', style: 'margin-top:14px' },
+        B('Spostamento', 'Spostamento'), B('Traduzione', 'Traduzione'),
+        B('Registro', 'Consultazione'), B('Enigma', 'Enigma')),
+      el('div', { class: 'grid2', style: 'margin-top:10px' },
+        el('button', { class: 'big ghost', type: 'button', onclick: () => {
+            const u = M.storia.pop(); if (u) { M.min = Math.min(30, M.min + u); roll.textContent = 'annullato −' + u + ' min'; dipingi(); } } }, 'Annulla'),
+        el('button', { class: 'big', type: 'button', onclick: () => {
+            M.loop++; M.min = 30; M.storia = []; roll.textContent = 'Nuovo loop. Il mondo torna indietro.'; dipingi(); } }, 'Nuovo loop'))),
+    el('div', { class: 'card cold' },
+      el('div', { class: 'eyebrow', style: 'color:var(--cold)' }, 'Stato dei rilevatori su questo dispositivo'), stato),
+    el('div', { class: 'card' },
+      el('div', { class: 'eyebrow' }, 'Failsafe del narratore'),
+      el('p', { class: 'hint', style: 'margin:8px 0 0' },
+        'Se il gruppo si blocca, il tuo compito è far avanzare la trama: leggi tu il testo dal foglio chiavi e considera la stanza aperta. Le chiavi non sono in questa app di proposito — sono su CHIAVI-MASTER, stampato.'),
+      el('button', { class: 'big ghost', type: 'button', style: 'margin-top:14px', onclick: () => {
+          if (confirm('Azzerare tutti i progressi su QUESTO dispositivo?')) {
+            S = { testi: [], log: [], stanze: [], mecc: [], plain: {} }; save();
+            M = { min: 30, loop: 1, storia: [] }; salvaM(); dipingi(); } } }, 'Azzera dispositivo')));
+  dipingi();
+};
+
+/* ---------------- router ---------------- */
+function go(v) {
+  Cam.stop(document.getElementById('cam'));
+  (V[v] || V.ruoli)();
+  if (v && v !== 'ruoli') back.classList.remove('hide');
+  window.scrollTo(0, 0);
+  try { history.replaceState(null,'', v === 'ruoli' ? '#' : '#'+v); } catch (e) {}
+}
+back.addEventListener('click', () => go('ruoli'));
+window.addEventListener('hashchange', () => go(location.hash.slice(1) || 'ruoli'));
+go(location.hash.slice(1) || 'ruoli');
+
+</script>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0D13">
+<title>The Ember Loop — Terminale di Rilevamento</title>
+<style>
+:root{
+  --bg:#0A0D13; --sur:#12171F; --sur2:#1A2030; --line:#242C3A;
+  --ink:#DFE5EF; --dim:#8B96A8; --faint:#5F6B7D;
+  --ember:#F08A4B; --ember-dk:#2A1710;
+  --cold:#79B2D0; --cold-dk:#0F212B;
+  --warm:#D9C26A; --warm-dk:#241F0E;
+  --bad:#E06A5A;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.55;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:620px;margin:0 auto;padding:18px 16px 80px}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:12px;padding:8px 0 20px;border-bottom:1px solid var(--line);margin-bottom:22px}
+header .mark{width:30px;height:30px;border-radius:50%;border:2px solid var(--ember);position:relative;flex:0 0 auto}
+header .mark::after{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--ember)}
+header h1{font-size:17px}
+header .sub{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+#back{margin-left:auto;background:none;border:1px solid var(--line);color:var(--dim);
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;padding:7px 12px;border-radius:4px;cursor:pointer}
+#back:hover,#back:focus-visible{border-color:var(--ember);color:var(--ember);outline:none}
+
+/* ---------- role cards ---------- */
+.roles{display:grid;gap:12px}
+.role{
+  display:block;width:100%;text-align:left;background:var(--sur);border:1px solid var(--line);
+  border-radius:6px;padding:18px;cursor:pointer;color:inherit;font:inherit;transition:border-color .15s
+}
+.role:hover,.role:focus-visible{border-color:var(--ember);outline:none}
+.role .n{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--ember);text-transform:uppercase}
+.role h3{font-size:19px;margin:6px 0 4px}
+.role p{margin:0;color:var(--dim);font-size:14px}
+.role.gm .n{color:var(--cold)}
+.role.gm:hover,.role.gm:focus-visible{border-color:var(--cold)}
+
+/* ---------- generic ---------- */
+.card{background:var(--sur);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
+.card.acc{border-color:var(--ember);background:var(--ember-dk)}
+.card.cold{border-color:var(--cold);background:var(--cold-dk)}
+button.big{
+  display:block;width:100%;padding:15px;border-radius:6px;border:1px solid var(--ember);
+  background:var(--ember-dk);color:var(--ember);font-family:var(--mono);font-size:13px;
+  letter-spacing:.14em;text-transform:uppercase;cursor:pointer;margin-bottom:12px
+}
+button.big:hover,button.big:focus-visible{background:var(--ember);color:#0A0D13;outline:none}
+button.ghost{background:none;border:1px solid var(--line);color:var(--dim)}
+button.ghost:hover,button.ghost:focus-visible{border-color:var(--dim);background:var(--sur2);color:var(--ink)}
+input[type=text]{
+  width:100%;padding:14px;border-radius:6px;border:1px solid var(--line);background:var(--bg);
+  color:var(--ink);font-family:var(--mono);font-size:16px;letter-spacing:.12em;text-transform:uppercase
+}
+input[type=text]:focus{outline:none;border-color:var(--ember)}
+label.fld{display:block;margin-bottom:8px}
+label.fld .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;display:block;margin-bottom:7px}
+.hint{color:var(--faint);font-size:13px;margin:10px 0 0}
+.err{color:var(--bad);font-size:13.5px;margin:10px 0 0;font-family:var(--mono)}
+.ok{color:var(--ember);font-size:13.5px;margin:10px 0 0;font-family:var(--mono)}
+
+/* ---------- scanner ---------- */
+#cam{position:relative;border-radius:6px;overflow:hidden;background:#000;margin-bottom:12px;display:none}
+#cam video{width:100%;display:block}
+#cam .ret{position:absolute;inset:14%;border:2px solid var(--ember);border-radius:8px;opacity:.85;
+  box-shadow:0 0 0 100vmax rgba(10,13,19,.55)}
+#cam .cap{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-family:var(--mono);
+  font-size:11px;letter-spacing:.12em;color:var(--ember)}
+
+/* ---------- glyphs ---------- */
+.glyphs{
+  font-family:var(--mono);font-size:19px;line-height:1.75;letter-spacing:.22em;color:var(--dim);
+  word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:14px;
+  max-height:190px;overflow:auto
+}
+.plain{white-space:pre-wrap;font-size:16.5px;line-height:1.7}
+.plain.rev{animation:rise .5s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.plain.rev{animation:none}}
+
+/* ---------- list ---------- */
+.item{border:1px solid var(--line);border-radius:6px;padding:14px;margin-bottom:10px;background:var(--sur)}
+.item.lock{opacity:.5;border-style:dashed}
+.item h4{margin:0 0 4px;font-size:15.5px;font-weight:600}
+.item .meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.item .body{white-space:pre-wrap;color:var(--dim);font-size:14px;margin-top:8px}
+.item .clue{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);color:var(--cold);font-size:13.5px}
+
+/* ---------- puzzle ---------- */
+#pz{touch-action:manipulation;display:block;width:100%;height:auto;background:var(--bg);
+  border:1px solid var(--line);border-radius:6px}
+.pzrow{display:flex;gap:10px;margin:12px 0}
+.pzrow button{flex:1;margin:0;padding:13px}
+
+/* ---------- master ---------- */
+.clock{font-family:var(--mono);font-size:15vw;line-height:1;text-align:center;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;padding:8px 0 4px}
+@media(min-width:620px){.clock{font-size:88px}}
+.clock.warn{color:var(--warm)}
+.clock.crit{color:var(--ember)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2 button{margin:0}
+.roll{font-family:var(--mono);font-size:13px;color:var(--warm);text-align:center;min-height:22px;letter-spacing:.1em}
+.chip{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;padding:3px 9px;
+  border-radius:3px;border:1px solid var(--line);color:var(--faint);margin:0 6px 6px 0;text-transform:uppercase}
+.chip.on{border-color:var(--ember);color:var(--ember);background:var(--ember-dk)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark" aria-hidden="true"></div>
+    <div>
+      <h1 id="vt">The Ember Loop</h1>
+      <div class="sub" id="vs">Terminale di rilevamento</div>
+    </div>
+    <button id="back" class="hide" type="button">← Ruoli</button>
+  </header>
+  <main id="app"></main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<script src="dati.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
