@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="it"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ember Loop — diagnostica scanner</title>
+<style>
+:root{--bg:#0A0D13;--sur:#12171F;--line:#242C3A;--ink:#DFE5EF;--dim:#8B96A8;
+ --ok:#5FBF7F;--bad:#E06A5A;--em:#F08A4B;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);
+ font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}.sub{color:var(--dim);font-size:13px;margin:0 0 18px}
+.r{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.r b{font-weight:400;color:var(--dim)}
+.v{font-family:var(--mono);font-size:13px;text-align:right}
+.si{color:var(--ok)}.no{color:var(--bad)}.em{color:var(--em)}
+button{width:100%;padding:15px;margin:16px 0 8px;border-radius:6px;border:1px solid var(--em);
+ background:#2A1710;color:var(--em);font-family:var(--mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+video{width:100%;border-radius:6px;background:#000;display:none;margin-top:8px}
+#esito{font-family:var(--mono);font-size:15px;padding:14px;border-radius:6px;border:1px dashed var(--line);
+ margin-top:12px;color:var(--dim);white-space:pre-wrap}
+</style></head><body>
+<h1>Diagnostica scanner</h1>
+<p class="sub">Apri questa pagina dal telefono, sullo stesso indirizzo dell'app.</p>
+<div id="tab"></div>
+<button id="go">Avvia prova fotocamera</button>
+<video id="v" playsinline muted></video>
+<div id="esito">In attesa.</div>
+<script src="jsQR.min.js"></script>
+<script>
+const tab = document.getElementById('tab'), esito = document.getElementById('esito');
+const riga = (k, v, cls) => { const d = document.createElement('div'); d.className = 'r';
+  d.innerHTML = '<b>' + k + '</b><span class="v ' + (cls||'') + '">' + v + '</span>'; tab.append(d); };
+
+riga('Indirizzo', location.protocol + '//' + location.host, location.protocol === 'https:' ? 'si' : 'em');
+riga('Contesto sicuro', window.isSecureContext ? 'si' : 'NO — niente fotocamera', window.isSecureContext ? 'si' : 'no');
+riga('jsQR caricato', typeof jsQR === 'function' ? 'si' : 'NO — manca jsQR.min.js', typeof jsQR === 'function' ? 'si' : 'no');
+riga('mediaDevices', navigator.mediaDevices ? 'si' : 'NO', navigator.mediaDevices ? 'si' : 'no');
+riga('Browser', navigator.userAgent.slice(0, 42) + '…');
+
+document.getElementById('go').onclick = async () => {
+  const v = document.getElementById('v');
+  esito.textContent = 'Chiedo il permesso…';
+  let st;
+  try {
+    st = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+  } catch (e) {
+    esito.innerHTML = '<span class="no">Fotocamera negata: ' + e.name + '</span>\n' + (e.message || '');
+    return;
+  }
+  v.srcObject = st; v.style.display = 'block'; await v.play();
+  const t = st.getVideoTracks()[0], s = t.getSettings ? t.getSettings() : {};
+  riga('Risoluzione reale', (s.width || v.videoWidth) + '×' + (s.height || v.videoHeight), 'si');
+  riga('Fotocamera usata', s.facingMode || t.label.slice(0, 26) || '?', 'si');
+
+  const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+  let n = 0, t0 = Date.now();
+  const cerca = (sx, sy, sw, sh, dw) => { const dh = Math.round(sh * dw / sw);
+    cv.width = dw; cv.height = dh; cx.drawImage(v, sx, sy, sw, sh, 0, 0, dw, dh);
+    const d = cx.getImageData(0, 0, dw, dh);
+    return typeof jsQR === 'function' ? jsQR(d.data, dw, dh, { inversionAttempts: 'attemptBoth' }) : null; };
+  (function loop() {
+    if (v.readyState === v.HAVE_ENOUGH_DATA && v.videoWidth) {
+      n++;
+      const W = v.videoWidth, H = v.videoHeight;
+      let r = cerca(0, 0, W, H, Math.min(800, W)), via = 'fotogramma intero';
+      if (!r) { const l = Math.round(Math.min(W, H) * 0.72);
+        r = cerca(Math.round((W - l) / 2), Math.round((H - l) / 2), l, l, Math.min(800, l)); via = 'ritaglio centrale'; }
+      if (r && r.data) {
+        st.getTracks().forEach(x => x.stop()); v.style.display = 'none';
+        esito.innerHTML = '<span class="si">LETTO: ' + r.data + '</span>\n' +
+          'trovato con: ' + via + '\ndopo ' + n + ' fotogrammi, ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s\n' +
+          'risoluzione ' + W + '×' + H;
+        return;
+      }
+      if (n % 10 === 0) esito.textContent = 'Cerco… ' + n + ' fotogrammi analizzati a ' + W + '×' + H +
+        '\n(se non trova nulla: avvicina, illumina, evita riflessi sullo schermo)';
+    }
+    requestAnimationFrame(loop);
+  })();
+};
+</script></body></html>

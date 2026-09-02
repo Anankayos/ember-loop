@@ -80,17 +80,34 @@ const Cam = {
   async start(box, onCode) {
     const v = box.querySelector('video'), cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' },
+                 width: { ideal: 1280 }, height: { ideal: 720 } } });
     } catch (e) { this.errore = (e && e.name) || 'errore'; return false; }
     v.srcObject = this.stream; v.setAttribute('playsinline', ''); v.muted = true; await v.play();
     box.style.display = 'block';
+    let frame = 0;
+    const cerca = (sx, sy, sw, sh, dw) => {
+      const dh = Math.round(sh * dw / sw);
+      cv.width = dw; cv.height = dh;
+      cx.drawImage(v, sx, sy, sw, sh, 0, 0, dw, dh);
+      const d = cx.getImageData(0, 0, dw, dh);
+      return jsQR(d.data, dw, dh, { inversionAttempts: 'attemptBoth' });
+    };
     const tick = () => {
-      if (v.readyState === v.HAVE_ENOUGH_DATA) {
-        const w = Math.min(520, v.videoWidth); const sc = w / v.videoWidth;
-        cv.width = w; cv.height = v.videoHeight * sc;
-        cx.drawImage(v, 0, 0, cv.width, cv.height);
-        const d = cx.getImageData(0, 0, cv.width, cv.height);
-        const r = jsQR(d.data, d.width, d.height, { inversionAttempts: 'attemptBoth' });
+      if (v.readyState === v.HAVE_ENOUGH_DATA && v.videoWidth) {
+        frame++;
+        const W = v.videoWidth, H = v.videoHeight;
+        // passata A: tutto il fotogramma, ridotto quanto basta
+        let r = cerca(0, 0, W, H, Math.min(800, W));
+        // passata B: solo il centro, a piena risoluzione. Serve quando il sigillo
+        // e' lontano o piccolo: nella passata A i moduli sarebbero troppo fini.
+        if (!r) {
+          const lato = Math.round(Math.min(W, H) * 0.72);
+          r = cerca(Math.round((W - lato) / 2), Math.round((H - lato) / 2), lato, lato, Math.min(800, lato));
+        }
+        const cap = box.querySelector('.cap');
+        if (cap && frame % 8 === 0) cap.textContent = 'cerco un sigillo… ' + frame + ' fotogrammi';
         if (r && r.data) { this.stop(box); onCode(r.data.trim().toUpperCase()); return; }
       }
       this.raf = requestAnimationFrame(tick);
@@ -174,7 +191,10 @@ V.decifra = () => {
     el('div', { class: 'card' },
       el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Codice sigillo'), codeIn),
       el('button', { class: 'big ghost', type: 'button', style: 'margin-top:12px',
-        onclick: () => apri(codeIn.value.trim().toUpperCase()) }, 'Apri reperto'),
+        onclick: () => { const c = codeIn.value.trim().toUpperCase();
+          if (!c) { clear(out); out.append(el('p', { class: 'err' },
+            '⚠ Scrivi il codice del sigillo, per esempio KNDL-01.')); return; }
+          apri(c); } }, 'Apri reperto'),
       el('p', { class: 'hint' }, 'Se la fotocamera non parte, digita il codice stampato sotto il sigillo.')),
     out);
 };
