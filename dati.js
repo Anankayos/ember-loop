@@ -5,16 +5,16 @@ window.DATI = {
    "id": "P1",
    "nome": "Il Pianeta dell'Amicizia",
    "sub": "l'origine dei Kindler",
-   "meccanica": "PORTARE",
-   "mecc_desc": "Puoi far attraversare al reset un solo oggetto fisico. Cio' che tieni in mano quando arriva la luce, resta in mano.",
+   "meccanica": "UNIRE",
+   "mecc_desc": "Puoi fare in tre cio' che nessuno di voi fa da solo. Tre mani sulla stessa pietra la muovono; una sola non la sfiora nemmeno.",
    "chiave_hash": "b0f4f4c9451f9129"
   },
   {
    "id": "P2",
    "nome": "Il Pianeta della Sofferenza",
    "sub": "la divisione dei Kindler",
-   "meccanica": "PERCEPIRE",
-   "mecc_desc": "Puoi percepire cio' che sta oltre lo zero. Per pochi secondi, dopo la luce, continui a sentire.",
+   "meccanica": "PORTARE",
+   "mecc_desc": "Puoi far attraversare al reset un solo oggetto fisico. Cio' che tieni in mano quando arriva la luce, resta in mano.",
    "chiave_hash": "311f42e04adc76a6"
   },
   {
@@ -189,14 +189,14 @@ window.DATI = {
    "pianeta": "P1",
    "nome": "La Sala Comune",
    "codice": "VETRINA",
-   "sblocca": "Rivela KNDL-01 e la meccanica PORTARE."
+   "sblocca": "Rivela KNDL-01 e la meccanica UNIRE."
   },
   {
    "id": "S-P2",
    "pianeta": "P2",
    "nome": "La Camera Centrale",
    "codice": "CORRIDOIO",
-   "sblocca": "Rivela KNDL-03 e la meccanica PERCEPIRE."
+   "sblocca": "Rivela KNDL-03 e la meccanica PORTARE."
   },
   {
    "id": "S-P3",

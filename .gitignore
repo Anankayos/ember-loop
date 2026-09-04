@@ -6,11 +6,17 @@ contenuti.py
 CHIAVI-MASTER.md
 .segreti
 
-# impianto di progetto: contiene la struttura completa, cioe' spoiler
+# impianto di progetto e documenti di soluzione: sono spoiler completi.
+# Il repo e' pubblico su GitHub Pages: chi gioca puo' leggerlo.
 00-progetto.md
+enigmi.md
+locazioni.md
 
-# materiale di lavoro
+# materiale di lavoro: i verificatori contengono le soluzioni
 verifica_puzzle.py
+verifica_nodo.py
+verifica_congegno.py
+verifica_macchina.py
 _casi.json
 push-log.txt
 diagnosi.txt

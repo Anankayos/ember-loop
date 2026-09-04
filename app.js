@@ -463,10 +463,16 @@ function enigma(st) {
 
 /* ---- MASTER · console di sistema ----
    I 30 minuti sono un BUDGET, non un cronometro: ogni azione costa 1d4+1. */
+/* Le tre regole si leggono dai dati, non si scrivono qui: se cambiano in
+   contenuti.md la console si aggiorna da sola invece di mentire. */
+const REGOLE = () => (D.pianeti || [])
+  .filter(p => p.id !== 'FIN' && p.meccanica)
+  .map(p => p.meccanica);
+
 V.master = () => {
   vt.textContent = 'Console di Sistema'; vs.textContent = 'Solo per il narratore';
   clear(app);
-  let M = { min: 30, loop: 1, storia: [] };
+  let M = { min: 30, loop: 1, storia: [], muti: {} };
   try { Object.assign(M, JSON.parse(localStorage.getItem('emberloop.master') || '{}')); } catch (e) {}
   const salvaM = () => { try { localStorage.setItem('emberloop.master', JSON.stringify(M)); } catch (e) {} };
 
@@ -474,14 +480,16 @@ V.master = () => {
   const sotto = el('div', { class: 'eyebrow', style: 'text-align:center;margin-bottom:4px' });
   const roll = el('div', { class: 'roll' }, ' ');
   const stato = el('div', { style: 'margin-top:6px' });
+  let ridisegnaVoci = () => {};   // assegnata dal pannello Voci piu' sotto
 
   const dipingi = () => {
     clock.textContent = M.min + "'";
     clock.className = 'clock mono' + (M.min <= 5 ? ' crit' : M.min <= 12 ? ' warn' : '');
     sotto.textContent = 'Loop ' + M.loop + ' · minuti rimasti nel loop';
     clear(stato);
-    ['PORTARE', 'PERCEPIRE', 'SCEGLIERE'].forEach(m =>
+    REGOLE().forEach(m =>
       stato.append(el('span', { class: 'chip' + (S.mecc.includes(m) ? ' on' : '') }, m)));
+    ridisegnaVoci();
     stato.append(el('div', { class: 'hint', style: 'margin-top:8px' },
       S.mecc.length === 3 ? '▸ Tre meccaniche acquisite: possono restare oltre la luce. Sblocca Il Cuore del Sistema.'
                           : '▸ ' + S.mecc.length + '/3 meccaniche. Servono tutte e tre per vedere l’accensione.'));
@@ -505,7 +513,45 @@ V.master = () => {
         el('button', { class: 'big ghost', type: 'button', onclick: () => {
             const u = M.storia.pop(); if (u) { M.min = Math.min(30, M.min + u); roll.textContent = 'annullato −' + u + ' min'; dipingi(); } } }, 'Annulla'),
         el('button', { class: 'big', type: 'button', onclick: () => {
-            M.loop++; M.min = 30; M.storia = []; roll.textContent = 'Nuovo loop. Il mondo torna indietro.'; dipingi(); } }, 'Nuovo loop'))),
+            M.loop++; M.min = 30; M.storia = []; M.muti = {};
+            roll.textContent = 'Nuovo loop. Il mondo torna indietro, e le voci tornano.'; dipingi(); } }, 'Nuovo loop'))),
+    (() => {
+      /* Voci — la Macchina dell'Empatia toglie la voce a chi la alimenta.
+         Chi e' muto puo' mostrare ma non spiegare; se parla lo stesso,
+         costa 1d4+1 minuti come qualunque altra azione del loop. */
+      const RUOLI = ['Decifratore', 'Consultatore', 'Apritore'];
+      const righe = el('div', { style: 'margin-top:12px' });
+      const disegna = () => {
+        clear(righe);
+        RUOLI.forEach(r => {
+          const muto = !!M.muti[r];
+          const nome = el('span', { class: 'n' }, muto ? r + ' \u00b7 muto' : r);
+          const sw = el('button', { class: 'big ghost', type: 'button',
+            onclick: () => { M.muti[r] = !muto;
+              roll.textContent = muto ? r + ': la voce torna' : r + ': la Macchina prende la voce';
+              salvaM(); disegna(); } },
+            muto ? 'ridai voce' : 'zittisci');
+          const riga = el('div', { class: 'voci-r' + (muto ? ' mu' : '') }, nome);
+          if (muto) riga.append(el('button', { class: 'big', type: 'button',
+            onclick: () => spendi('Ha parlato: ' + r) }, 'ha parlato'));
+          riga.append(sw);
+          righe.append(riga);
+        });
+        const n = RUOLI.filter(r => M.muti[r]).length;
+        righe.append(el('p', { class: 'hint', style: 'margin:10px 0 0' },
+          n === 0 ? 'Nessuno e\u2019 muto. Tutte e tre le voci sono in gioco.'
+          : n === 1 ? 'Uno e\u2019 muto. Puo\u2019 mostrare, non spiegare.'
+          : n === 2 ? 'Due muti: la Macchina e\u2019 stata alimentata. Nessun secondo tentativo in questo loop.'
+          : 'Tre muti. Se non e\u2019 un errore, il tavolo e\u2019 in un guaio interessante.'));
+      };
+      ridisegnaVoci = disegna;
+      disegna();
+      return el('div', { class: 'card' },
+        el('div', { class: 'eyebrow' }, 'Voci'),
+        el('p', { class: 'hint', style: 'margin:8px 0 0' },
+          'La Macchina dell\u2019Empatia toglie la voce ai due che hanno alimentato la terna, fino al reset. Se un muto parla lo stesso, il bottone tira 1d4+1 e scala dal budget.'),
+        righe);
+    })(),
     el('div', { class: 'card cold' },
       el('div', { class: 'eyebrow', style: 'color:var(--cold)' }, 'Stato dei rilevatori su questo dispositivo'), stato),
     el('div', { class: 'card' },
@@ -545,7 +591,7 @@ V.master = () => {
       el('button', { class: 'big ghost', type: 'button', style: 'margin-top:14px', onclick: () => {
           if (confirm('Azzerare tutti i progressi su QUESTO dispositivo?')) {
             S = { testi: [], log: [], stanze: [], mecc: [], plain: {}, storico: [] }; save();
-            M = { min: 30, loop: 1, storia: [] }; salvaM(); dipingi(); } } }, 'Azzera dispositivo')));
+            M = { min: 30, loop: 1, storia: [], muti: {} }; salvaM(); dipingi(); } } }, 'Azzera dispositivo')));
   dipingi();
 };
 

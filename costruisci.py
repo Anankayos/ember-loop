@@ -262,4 +262,8 @@ if perdite:
 print("  Nessuna chiave nei file pubblicabili.")
 if os.path.exists("genera_stampe.py"):
     subprocess.run([sys.executable, "genera_stampe.py"])
+
+# la copia offline si rigenera sempre, cosi' non puo' restare indietro
+if os.path.exists("genera_offline.py"):
+    subprocess.run([sys.executable, "genera_offline.py"])
 print()

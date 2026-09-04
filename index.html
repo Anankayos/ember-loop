@@ -114,6 +114,11 @@ label.fld .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color
 @media(min-width:620px){.clock{font-size:88px}}
 .clock.warn{color:var(--warm)}
 .clock.crit{color:var(--ember)}
+/* pannello Voci della console: bottoni in riga, non a piena larghezza */
+.voci-r{display:flex;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.voci-r .n{flex:1;min-width:0;font-size:14px}
+.voci-r.mu .n{color:var(--faint)}
+.voci-r button.big{width:auto;flex:0 0 auto;margin:0;padding:9px 12px;font-size:11px;letter-spacing:.1em}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid2 button{margin:0}
 .roll{font-family:var(--mono);font-size:13px;color:var(--warm);text-align:center;min-height:22px;letter-spacing:.1em}
