@@ -15,14 +15,14 @@ import re, sys, pathlib, html
 QUI = pathlib.Path(__file__).parent
 SORGENTE = QUI / 'index.html'
 USCITA = QUI / 'prova-offline.html'
-DA_INCORPORARE = ['jsQR.min.js', 'dati.js', 'app.js']
+DA_INCORPORARE = ['jsQR.min.js', 'dati.js', 'cifrari.js', 'app.js']
 
 AVVISO = """
 <div style="max-width:560px;margin:0 auto;padding:14px 18px;border:1px solid #3A2F22;
      background:#191410;color:#C6A268;font:13px/1.5 system-ui,sans-serif">
   <b>Copia unica di prova.</b> Questo file contiene tutto: non chiede niente alla rete.
   Generato da <code>genera_offline.py</code> — non modificarlo a mano, le modifiche
-  vanno in <code>index.html</code>, <code>app.js</code> o <code>contenuti.md</code>.
+  vanno in <code>index.html</code>, <code>app.js</code>, <code>cifrari.js</code> o <code>contenuti.md</code>.
 </div>
 """
 

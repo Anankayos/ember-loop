@@ -11,12 +11,21 @@ CHIAVI-MASTER.md
 00-progetto.md
 enigmi.md
 locazioni.md
+cifrari.md
+SPECIFICA-APP.md
 
 # materiale di lavoro: i verificatori contengono le soluzioni
 verifica_puzzle.py
 verifica_nodo.py
 verifica_congegno.py
 verifica_macchina.py
+verifica_griglie.py
+cifrari.py
+controlla_testi.py
+# le prove: un contenuto finto che potrebbe usare per caso una parola vera,
+# e che la guardia di push.ps1 fermerebbe
+prove/
+dati.js.prima
 _casi.json
 push-log.txt
 diagnosi.txt

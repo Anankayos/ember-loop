@@ -67,7 +67,7 @@ if (-not $r.Ok) { Fail "impossibile leggere lo staging: $($r.Out)" }
 $staged = @($r.Out | Where-Object { $_ -ne "" })
 
 # ---- 3a. PROTEZIONE: file che non devono mai uscire ----
-$vietati = @($staged | Where-Object { $_ -match 'CHIAVI-MASTER|contenuti\.py' })
+$vietati = @($staged | Where-Object { $_ -match 'CHIAVI-MASTER|contenuti\.(py|md)|\.segreti|SPECIFICA-APP|cifrari\.(py|md)' })
 if ($vietati.Count -gt 0) {
   Write-Host ""
   Write-Host "  FERMO TUTTO - file proibiti nello staging:" -ForegroundColor Red
@@ -83,7 +83,7 @@ if (Test-Path ".segreti") {
   $segreti = @(Get-Content ".segreti" | Where-Object { $_.Trim() -ne "" } | ForEach-Object { $_.Trim() })
 }
 if ($segreti.Count -eq 0) {
-  Write-Host "  [!] .segreti non trovato: rigeneralo con  python contenuti.py" -ForegroundColor Yellow
+  Write-Host "  [!] .segreti non trovato: rigeneralo con  python costruisci.py" -ForegroundColor Yellow
 } else {
   $trovati = @()
   foreach ($f in $staged) {

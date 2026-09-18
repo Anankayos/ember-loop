@@ -1,9 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Genera stampa.html: sigilli QR + fogli reperto + carte-stanza.
-   I glifi sono resi dal browser con LA STESSA funzione dell'app, cosi' combaciano sempre."""
-import qrcode, qrcode.image.svg, io, re, json
+"""Genera stampa.html: un foglio-sigillo per ogni testo, e le carte-porta per il narratore.
+   I glifi sono resi dal browser con LA STESSA funzione dell'app, cosi' combaciano sempre.
+   Lo lancia costruisci.py; da solo:  python genera_stampe.py"""
+import html, json, re, sys
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+try:
+    import qrcode
+except ImportError:
+    print("  !! manca il modulo qrcode: pip install qrcode"); sys.exit(1)
 
 d = json.loads(re.sub(r'^.*?window\.DATI = ', '', open('dati.js', encoding='utf-8').read(), flags=re.S).rstrip().rstrip(';'))
+if d.get('schema') != 2:
+    print("  !! dati.js e' nel formato vecchio: rigeneralo con  python costruisci.py"); sys.exit(1)
+e = lambda s: html.escape(str(s or ''), quote=True)
 
 def qr_svg(dati, px=150):
     q = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_H, box_size=10, border=2)
@@ -12,7 +22,7 @@ def qr_svg(dati, px=150):
     celle = "".join(f'<rect x="{x}" y="{y}" width="1" height="1"/>'
                     for y, row in enumerate(m) for x, v in enumerate(row) if v)
     return (f'<svg viewBox="0 0 {n} {n}" width="{px}" height="{px}" shape-rendering="crispEdges" '
-            f'role="img" aria-label="sigillo {dati}"><rect width="{n}" height="{n}" fill="#fff"/>'
+            f'role="img" aria-label="sigillo {e(dati)}"><rect width="{n}" height="{n}" fill="#fff"/>'
             f'<g fill="#111">{celle}</g></svg>')
 
 def sigillo(codice, px=104):
@@ -24,43 +34,35 @@ def sigillo(codice, px=104):
       </svg>
       <div class="qr">{qr_svg(codice, px)}</div>
     </div>
-    <div class="cod">{codice}</div>'''
+    <div class="cod">{e(codice)}</div>'''
 
 P = {p['id']: p for p in d['pianeti']}
+nome = lambda pid: (P.get(pid) or {}).get('nome', pid)
 pag = []
 
-# --- fogli reperto (testi cifrati) ---
+# --- un foglio per testo: il sigillo da scansionare, il testo si apre da solo nell'app ---
 for t in d['testi']:
-    pia = P.get(t['pianeta'], {'sub': 'registrazione terminale', 'nome': 'Il Cuore del Sistema'})
     pag.append(f'''<section class="foglio">
   <div class="hd"><div class="eb">Archivio Kindler &middot; reperto</div>
-    <h2>{t['titolo']}</h2><div class="sub">{pia['sub']}</div></div>
-  <div class="mid">{sigillo(t['sigillo'])}</div>
-  <div class="gly" data-seme="{t['sigillo']}" data-n="260"></div>
-  <div class="ft">Decifrabile solo con la chiave corretta. Il Decifratore inquadra il sigillo, oppure digita <b>{t['sigillo']}</b>.</div>
+    <h2>{e(t['titolo'])}</h2><div class="sub">{e(nome(t['pianeta']))}</div></div>
+  <div class="mid">{sigillo(t['id'])}</div>
+  <div class="gly" data-seme="{e(t['id'])}" data-n="260"></div>
+  <div class="ft">Il Decifratore inquadra il sigillo, oppure digita <b>{e(t['id'])}</b>: il testo si apre da solo.</div>
 </section>''')
 
-# --- carte log (4 per pagina) ---
-carte = "".join(f'''<div class="carta">
-  <div class="eb">Diario di bordo</div><h3>{L['sigillo']}</h3>
-  <div class="mini">{sigillo(L['sigillo'], 88)}</div>
-  <div class="ft2">{P.get(L['pianeta'],{}).get('sub','')}</div></div>''' for L in d['log'])
-pag.append(f'<section class="foglio"><div class="hd"><div class="eb">Da ritagliare</div><h2>Sigilli del diario di bordo</h2>'
-           f'<div class="sub">uno per ogni voce &middot; il Consultatore li scansiona</div></div><div class="griglia">{carte}</div></section>')
-
-# --- carte stanza ---
-st = "".join(f'''<div class="carta stanza">
-  <div class="eb">Stanza</div><h3>{s['nome']}</h3>
-  <div class="codbig">{s['codice']}</div>
-  <div class="ft2">{s['sblocca']}</div></div>''' for s in d['stanze'])
-pag.append(f'<section class="foglio"><div class="hd"><div class="eb">Solo per il Master &middot; da ritagliare</div>'
-           f'<h2>Carte-stanza</h2><div class="sub">consegnale quando l\'Apritore comunica il codice</div></div>'
-           f'<div class="griglia">{st}</div></section>')
+# --- carte-porta, per il narratore ---
+if d['stanze']:
+    st = "".join(f'''<div class="carta stanza">
+  <div class="eb">Porta di pietra &middot; {e(nome(s['pianeta']))}</div><h3>{e(s['nome'])}</h3>
+  <div class="ft2">{e(s['sblocca'])}</div></div>''' for s in d['stanze'])
+    pag.append(f'<section class="foglio"><div class="hd"><div class="eb">Solo per il narratore &middot; da ritagliare</div>'
+               f'<h2>Carte-porta</h2><div class="sub">consegnale quando il telefono dell\'Apritore mostra la porta aperta</div></div>'
+               f'<div class="griglia">{st}</div></section>')
 
 GLYPH_JS = open('app.js', encoding='utf-8').read()
 GLYPH_JS = GLYPH_JS[GLYPH_JS.index("const GL ="):GLYPH_JS.index("/* ---------------- scanner")]
 
-html = f'''<!doctype html><html lang="it"><head><meta charset="utf-8">
+pagina = f'''<!doctype html><html lang="it"><head><meta charset="utf-8">
 <title>The Ember Loop — materiali da stampare</title>
 <style>
 @page {{ size: A4; margin: 14mm; }}
@@ -83,14 +85,11 @@ h2 {{ margin:6px 0 2px; font-size:23pt; font-weight:600; letter-spacing:-.01em; 
 .carta {{ border:1.5px solid #111; border-radius:3px; padding:7mm; text-align:center; min-height:62mm;
   display:flex; flex-direction:column; align-items:center; justify-content:center; page-break-inside:avoid; }}
 .carta h3 {{ margin:4px 0 8px; font-size:13pt; font-family:ui-monospace,Menlo,monospace; letter-spacing:.12em; }}
-.mini {{ margin:2mm 0; }} 
-.ft2 {{ font-size:9pt; color:#555; font-style:italic; margin-top:6px; }}
+.ft2 {{ font-size:9.5pt; color:#444; margin-top:6px; white-space:pre-wrap; }}
 .carta.stanza {{ background:#f4f2ee; }}
-.codbig {{ font-family:ui-monospace,Menlo,monospace; font-size:19pt; letter-spacing:.24em; margin:5mm 0; }}
 @media print {{ body {{ background:#fff; }} .foglio {{ margin:0; box-shadow:none; }} }}
 </style></head><body>
 {"".join(pag)}
-<script src="dati.js"></script>
 <script>
 {GLYPH_JS}
 document.querySelectorAll('.gly').forEach(function(n){{
@@ -98,5 +97,5 @@ document.querySelectorAll('.gly').forEach(function(n){{
 }});
 </script>
 </body></html>'''
-open('stampa.html','w',encoding='utf-8').write(html)
-print("stampa.html generato ·", len(d['testi']), "fogli reperto +", len(d['log']), "sigilli log +", len(d['stanze']), "carte-stanza")
+open('stampa.html', 'w', encoding='utf-8', newline='\n').write(pagina)
+print("stampa.html generato ·", len(d['testi']), "fogli-sigillo +", len(d['stanze']), "carte-porta")
