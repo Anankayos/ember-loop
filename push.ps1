@@ -67,7 +67,7 @@ if (-not $r.Ok) { Fail "impossibile leggere lo staging: $($r.Out)" }
 $staged = @($r.Out | Where-Object { $_ -ne "" })
 
 # ---- 3a. PROTEZIONE: file che non devono mai uscire ----
-$vietati = @($staged | Where-Object { $_ -match 'CHIAVI-MASTER|contenuti\.(py|md)|\.segreti|SPECIFICA-APP|cifrari\.(py|md)' })
+$vietati = @($staged | Where-Object { $_ -match 'CHIAVI-MASTER|contenuti\.(py|md)|\.segreti|SPECIFICA-APP|cifrari\.(py|md)|soluzioni\.json|master\.html|genera_master\.py|da_excel\.py|Materials.*\.xlsx' })
 if ($vietati.Count -gt 0) {
   Write-Host ""
   Write-Host "  FERMO TUTTO - file proibiti nello staging:" -ForegroundColor Red

@@ -66,10 +66,56 @@ const Cifrari = (() => {
     segni(parola.toUpperCase()).filter(c => ALFA.includes(c)).map(c => ALFA.indexOf(c) + 1);
 
   /* ---------------- i tre cifrari ---------------- */
+  /* Ogni cifrario si porta dietro la propria spiegazione in una riga per parte. Non e' un
+     segreto che non sia gia' qui sopra in forma di codice: serve alla console del narratore,
+     che la mostra quando deve spiegare o sbloccare il tavolo. Le frasi che i giocatori
+     digitano NON stanno qui: quelle si leggono nei reperti propedeutici. */
+  /* Un esempio svolto per ogni passaggio, con parole INVENTATE: PIETRA, SOGLIA, LEGAME
+     non sono parole del gioco, cosi' il narratore puo' spiegare senza regalare niente.
+     I valori escono da questi stessi cifrari: prove/confronto_cifrari.py li ricalcola. */
   const CIFRARI = {
-    HUSA:  { alfabeto: 'scorrimento', ordine: 'inverso' },
-    POLIS: { alfabeto: 'specchio',    ordine: 'coppie' },
-    IRIS:  { alfabeto: 'anelli',      ordine: 'colonne' },
+    HUSA: {
+      alfabeto: 'scorrimento', ordine: 'inverso',
+      esempi: {
+        alfabeto: { da: 'PIETRA', a: 'TOIAVE', nota: 'ogni lettera avanti di 4' },
+        ordine: { da: 'PIETRA', a: 'ARTEIP', nota: 'la stessa parola, letta al contrario' },
+        chiave: { da: 'sigillo n. 10, parola di 6 segni', a: '16', nota: '10 + 6' },
+        insieme: { da: 'PIETRA', a: 'EVAIOT', nota: 'prima l’alfabeto, poi l’ordine, con la chiave 4' },
+      },
+      dice: {
+        alfabeto: 'Ogni lettera avanza di tanti posti quanti dice la chiave, sempre in avanti; arrivata in fondo riparte dalla A.',
+        ordine: 'La parola si legge al contrario: l’ultimo segno inciso è il primo che si legge.',
+        chiave: 'Il numero del sigillo più quante lettere ha la parola cifrata.',
+      },
+    },
+    POLIS: {
+      alfabeto: 'specchio', ordine: 'coppie',
+      esempi: {
+        alfabeto: { da: 'SOGLIA', a: 'IOURSD', nota: 'prima lo specchio, poi avanti di 4' },
+        ordine: { da: 'SOGLIA', a: 'OSLGAI', nota: 'scambiate a due a due' },
+        chiave: { da: 'sigillo n. 7, seconda parola guasta', a: '14', nota: '7 × 2' },
+        insieme: { da: 'SOGLIA', a: 'OIRUDS', nota: 'prima l’alfabeto, poi l’ordine, con la chiave 4' },
+      },
+      dice: {
+        alfabeto: 'Prima l’alfabeto si rovescia (A diventa Z, B diventa V…), poi scorre in avanti di quanto dice la chiave. In quest’ordine.',
+        ordine: 'Le lettere si scambiano a due a due: 1ª con 2ª, 3ª con 4ª. Se ne avanza una, resta dov’è.',
+        chiave: 'Il numero del sigillo per il posto della parola nel reperto: 1ª, 2ª, 3ª parola guasta.',
+      },
+    },
+    IRIS: {
+      alfabeto: 'anelli', ordine: 'colonne',
+      esempi: {
+        alfabeto: { da: 'LEGAME', a: 'NEGIPE', nota: 'ogni lettera col suo passo, nel suo anello' },
+        ordine: { da: 'LEGAME', a: 'LAEMGE', nota: 'tre colonne, lette in giù' },
+        chiave: { da: 'il reperto comincia con «Berg»', a: '2-5-16-7', nota: 'B E R G nell’alfabeto kindler' },
+        insieme: { da: 'LEGAME', a: 'NIEPGE', nota: 'prima l’alfabeto, poi l’ordine, con la chiave BERG' },
+      },
+      dice: {
+        alfabeto: 'Due ruote separate: le 5 vocali girano fra le vocali, le 16 consonanti fra le consonanti. Mai un salto da una ruota all’altra.',
+        ordine: 'La parola si scrive in tre colonne, riga per riga, e si legge in giù: prima colonna, poi seconda, poi terza.',
+        chiave: 'Non un numero: la prima parola in chiaro del reperto. Ogni sua lettera dà il passo di una lettera, poi si ricomincia.',
+      },
+    },
   };
   function cifra(pianeta, parola, k) {
     const c = CIFRARI[pianeta];
@@ -110,7 +156,7 @@ const Cifrari = (() => {
   const normParola = s => senzaAccenti(s).toUpperCase().replace(/[^A-Z]/g, '');
   const normCodice = s => senzaAccenti(s).toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-  /** La chiave come la digita il Consultatore: un numero oppure una parola. */
+  /** La chiave come la digita il Custode: un numero oppure una parola. */
   function leggiChiave(s) {
     const t = senzaAccenti(s).toUpperCase().replace(/\s+/g, '');
     if (/^\d{1,6}$/.test(t)) return { k: parseInt(t, 10), tipo: 'numero' };

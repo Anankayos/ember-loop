@@ -1,0 +1,40 @@
+plugins { id "com.android.application" }
+
+android {
+    namespace "it.emberloop.terminale"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "it.emberloop.terminale"
+        minSdk 24                 // Android 7: WebView moderno e getUserMedia
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release { minifyEnabled false }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    // gli assets non stanno nel repository: li copia prepara_apk.py prima della build
+    sourceSets { main { assets.srcDirs = ["src/main/assets"] } }
+}
+
+// Le dipendenze androidx tirano dentro due versioni della stdlib Kotlin: una 1.8+, dove
+// kotlin-stdlib-jdk7/jdk8 sono gia' dentro kotlin-stdlib, e una 1.6, dove sono separate.
+// Risultato: le stesse classi due volte, e dexing fallito. Si allineano tutte.
+configurations.all {
+    resolutionStrategy.eachDependency { dettagli ->
+        if (dettagli.requested.group == "org.jetbrains.kotlin"
+                && dettagli.requested.name.startsWith("kotlin-stdlib")) {
+            dettagli.useVersion "1.9.24"
+        }
+    }
+}
+
+dependencies {
+    implementation "androidx.appcompat:appcompat:1.7.0"
+    implementation "androidx.webkit:webkit:1.12.1"      // WebViewAssetLoader: l'origine sicura
+}

@@ -15,7 +15,7 @@ riga e cosa fare. E' voluto: quel materiale si stampa, e meglio fermarsi che
 stampare una cosa sbagliata. Il formato di contenuti.md e' in SPECIFICA-APP.md §4.1;
 i cifrari sono in cifrari.py, che e' la verita' e qui si usa soltanto.
 """
-import difflib, hashlib, importlib.util, json, os, re, shutil, subprocess, sys, unicodedata
+import base64, difflib, hashlib, importlib.util, json, os, re, shutil, subprocess, sys, unicodedata
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 if QUI not in sys.path:
@@ -39,6 +39,46 @@ def norm_parola(s):
 def norm_codice(s):
     return re.sub(r"[^A-Z0-9]", "", senza_accenti(s).upper())
 
+# ------------------------------------------------------------------ il codice del sigillo
+# Il numero del reperto NON puo' essere anche il codice per aprirlo: visto un HUSA-2,
+# chiunque indovina HUSA-3 e legge un reperto che non ha trovato. Il numero resta
+# stampato - al Custode serve, e' dentro due chiavi su tre - ma per aprire il testo
+# si digita un codice opaco di quattro segni, che dal numero non si ricava.
+#
+# Base32 di Crockford: niente I L O U, cosi' non si confondono con 1 0 e fra loro.
+# Deriva dall'id, quindi non cambia da una costruzione all'altra: i fogli gia' stampati
+# restano buoni.
+B32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+def codice_sigillo(sid, presi):
+    grezzo = int(hashlib.sha256(("sigillo:" + sid).encode("utf-8")).hexdigest(), 16)
+    for salto in range(200):                           # se due cadessero uguali, il secondo scala
+        n, c = grezzo + salto, ""
+        for _ in range(4):
+            n, r = divmod(n, 32)
+            c = B32[r] + c
+        if c not in presi:
+            presi.add(c)
+            return c
+    raise RuntimeError("non riesco a dare un codice distinto a " + sid)
+
+
+def qr_compatto(testo):
+    """La matrice del QR impacchettata bit a bit. Una pagina con 58 QR disegnati dentro
+       peserebbe mezzo mega: cosi' sono 6 KB, e li disegna chi li mostra."""
+    try:
+        import qrcode
+    except ImportError:
+        return ""
+    q = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_H, border=2)
+    q.add_data(testo)
+    q.make(fit=True)
+    m = q.get_matrix()
+    bit = "".join("1" if c else "0" for r in m for c in r)
+    grezzo = bytes(int(bit[i:i + 8].ljust(8, "0"), 2) for i in range(0, len(bit), 8))
+    return "%d:%s" % (len(m), base64.b64encode(grezzo).decode("ascii"))
+
+
 def impronta(s):
     """SHA-256 troncato a 16 esadecimali: serve a riconoscere un risultato, mai a produrlo."""
     return hashlib.sha256(s.encode("utf-8")).hexdigest()[:16]
@@ -46,9 +86,9 @@ def impronta(s):
 
 # ------------------------------------------------------------------ il formato
 BLOCCHI = {
-    "PIANETA": (("id", "nome", "tema", "meccanica"), ("codice_alfabeto", "codice_ordine")),
-    "TESTO":   (("sigillo", "pianeta", "titolo", "tipo"), ("cita", "rivela")),
-    "PAROLA":  (("parola", "pianeta"), ("apre",)),
+    "PIANETA": (("id", "nome", "tema", "meccanica"), ("codice_alfabeto", "codice_ordine", "simbolo", "rune")),
+    "TESTO":   (("sigillo", "pianeta", "titolo", "tipo"), ("cita", "rivela", "luogo", "posto")),
+    "PAROLA":  (("parola", "pianeta", "mondo"), ("apre",)),
     "LOG":     (("sigillo", "pianeta", "titolo"), ()),
     "ENIGMA":  (("id", "pianeta", "nome", "parola"), ()),
     "STANZA":  (("id", "pianeta", "nome", "puzzle"), ("griglia",)),
@@ -58,20 +98,49 @@ PERCHE_CAMPO = {
     ("PIANETA", "tema"): "(sofferenza, isolamento, amicizia...)",
     ("PIANETA", "meccanica"): "(la regola del loop che il pianeta restituisce)",
     ("TESTO", "tipo"): "(lore, aiuto oppure propedeutico)",
+    ("TESTO", "luogo"): "(la locazione sulla mappa dove sta il sigillo)",
+    ("TESTO", "posto"): "(il punto preciso: coordinata e descrizione, per il narratore che lo mette)",
     ("TESTO", "pianeta"): "(l'id di un blocco PIANETA)",
-    ("PAROLA", "pianeta"): "(la stessa parola puo' avere una voce per pianeta: dimmi di quale)",
+    ("PAROLA", "pianeta"): "(dove compare: la stessa parola puo' avere una voce per pianeta)",
+    ("PAROLA", "mondo"): "(il mondo che l'ha scritta: decide il simbolo accanto alla parola e quindi il cifrario)",
     ("ENIGMA", "parola"): "(la parola decifrata che ne apre l'ingresso)",
     ("STANZA", "puzzle"): "(bordi, separazione oppure simmetria)",
 }
 TIPI_TESTO = ("lore", "aiuto", "propedeutico")
 PARTI = ("alfabeto", "ordine", "chiave")
 PUZZLE = ("bordi", "separazione", "simmetria")
-# come si trova la chiave su ogni pianeta (SPECIFICA §3): e' il lavoro del Consultatore
+# gli strumenti che girano in coda alla costruzione, e cosa rifanno
+GENERATORI = {"genera_stampe.py": "stampa.html", "genera_offline.py": "prova-offline.html",
+              "genera_master.py": "master.html"}
+SIMBOLI = {"HUSA": "◆", "POLIS": "▲", "IRIS": "●"}       # se PIANETA non ne sceglie uno
+# Come si trova la chiave, mondo per mondo: e' il lavoro del Custode, e vale il mondo
+# che ha SCRITTO la parola, non il pianeta dove la parola compare. Tutte e tre si applicano
+# con quello che si ha davanti, senza cercare altrove (cifrari.py, sezione CHIAVE).
 PROCEDIMENTO = {
-    "HUSA": "il numero del sigillo del testo stesso",
-    "POLIS": "il numero del sigillo citato dal testo",
-    "IRIS": "la parola che apre la voce di registro citata dal testo",
+    "HUSA": "il numero del sigillo piu' le lettere della parola cifrata",
+    "POLIS": "il numero del sigillo per il posto della parola nel reperto (1a, 2a, 3a...)",
+    "IRIS": "la prima parola in chiaro del reperto",
 }
+# ------------------------------------------------------------------ la scala di difficolta'
+# Un sigillo e' difficile per quanto lavoro a mano chiede al tavolo, non per come e' scritto.
+# Il peso di una parola sono le lettere da trasformare piu' i passi della chiave: uno su Husa
+# e Polis, uno per lettera su Iris.
+#
+# Ma il peso si paga in due momenti, e vanno tenuti separati:
+#   ORA   le parole che quel mondo ha scritto da se'. Si aprono appena si imparano le sue tre
+#         regole, cioe' alla prima visita: e' questa la difficolta' che il tavolo sente.
+#   POI   le parole scritte da un altro mondo. Non sono piu' difficili: sono rinviate, e il
+#         sigillo si riapre al ritorno. Un sigillo pesante di POI non e' un muro.
+# La salita e' la salita di ORA. SCALA: fino a quanto peso, che livello.
+SCALA = (0, 8, 18, 32)
+TRATTO = "—"
+NOME_LIVELLO = {0: "lettura", 1: "facile", 2: "medio", 3: "duro", 4: "finale"}
+
+def livello_di(peso):
+    if peso == 0:
+        return 0
+    return sum(1 for s in SCALA if peso > s)
+
 CAMPI_VECCHI = {("PIANETA", "chiave"), ("PIANETA", "sottotitolo"), ("TESTO", "parole"),
                 ("LOG", "parola"), ("LOG", "indizio"), ("STANZA", "codice")}
 
@@ -169,9 +238,7 @@ def segmenta(b):
         grezza, riga = m.group(1).strip(), riga_di(m.start())
         if not grezza:
             err(f"riga {riga}, === TESTO === {b['campi'].get('sigillo', '')}: graffe vuote. Fra graffe va la parola da cifrare.")
-        elif re.search(r"\s", grezza):
-            err(f"riga {riga}, === TESTO === {b['campi'].get('sigillo', '')}: fra graffe va una parola sola, "
-                f"non  {{{grezza}}}. Se sono due parole chiave, mettile fra graffe una per una.")
+        # "Monte Alto" si cifra come MONTEALTO: il cifrario conosce solo le lettere kindler
         pezzi.append(("p", grezza.upper(), riga))
         pos = m.end()
     if pos < len(testo):
@@ -201,6 +268,18 @@ def forme_codice(c):
     """Come un codice puo' comparire scritto: con i suoi trattini, con gli spazi, tutto attaccato."""
     parti = re.findall(r"[A-Z0-9]+", senza_accenti(c).upper())
     return {c.strip().upper(), " ".join(parti), "".join(parti)} - {""}
+
+
+def contiene_codice(testo, cod):
+    """Vero se il testo contiene quella frase, comunque sia scritta (trattini, spazi, maiuscole)."""
+    spaziato = " " + " ".join(re.findall(r"[A-Z0-9]+", senza_accenti(testo or "").upper())) + " "
+    parti = re.findall(r"[A-Z0-9]+", senza_accenti(cod).upper())
+    return (" " + " ".join(parti) + " ") in spaziato or (" " + "".join(parti) + " ") in spaziato
+
+
+def chiaro_di(t):
+    """Quello che di un testo si legge senza decifrare niente: titolo e pezzi in chiaro."""
+    return t["titolo"] + "\n" + "\n".join(p[1] for p in t["pezzi"] if p[0] == "c")
 
 
 def fughe(dati, parole, codici):
@@ -271,6 +350,11 @@ def main():
     except ImportError:
         print("\n  Non trovo cifrari.py: e' in .gitignore, sta solo sul disco di Alessandro. Senza non cifro niente.\n")
         return 1
+    import simboli as SIM
+    guai_alfabeto = SIM.controlla()
+    if guai_alfabeto:
+        print("\n  L'alfabeto di simboli non va: " + "; ".join(guai_alfabeto) + "\n")
+        return 1
 
     blocchi = leggi("contenuti.md")
     if formato_vecchio(blocchi):
@@ -296,9 +380,14 @@ def main():
             continue
         c = b["campi"]
         if t == "PIANETA":
+            # rune: le parole che si posano alla fine. Non sono un cancello dell'app (il
+            # narratore le riconosce al tavolo), ma devono stare scritte da qualche parte
+            # che si controlla, se no il giorno della partita non le sa nessuno.
             pianeti.append(dict(b=b, id=c["id"].upper(), nome=c["nome"], tema=c["tema"],
                                 meccanica=c["meccanica"].upper(), mecc_desc=corpo_di(b),
-                                codice_alfabeto=c.get("codice_alfabeto", ""), codice_ordine=c.get("codice_ordine", "")))
+                                simbolo=c.get("simbolo", "") or SIMBOLI.get(c["id"].upper(), "?"),
+                                codice_alfabeto=c.get("codice_alfabeto", ""), codice_ordine=c.get("codice_ordine", ""),
+                                rune=[norm_parola(x) for x in re.split(r"[,;]+", c.get("rune", "")) if x.strip()]))
         elif t == "TESTO":
             tipo = c["tipo"].lower()
             if tipo not in TIPI_TESTO:
@@ -319,9 +408,22 @@ def main():
             if not corpo_di(b):
                 err(f"{dove(b)}: manca il testo dopo la riga  ---")
             testi.append(dict(b=b, id=sig, pianeta=c["pianeta"].upper(), titolo=c["titolo"], tipo=tipo,
-                              cita=c.get("cita", "").upper(), rivela=rivela, pezzi=segmenta(b)))
+                              luogo=c.get("luogo", ""), posto=c.get("posto", ""),
+                              cita=[x.strip().upper() for x in re.split(r"[,;]+", c.get("cita", "")) if x.strip()],
+                              rivela=rivela, pezzi=segmenta(b)))
         elif t == "PAROLA":
-            parole.append(dict(b=b, parola=c["parola"].strip().upper(), pianeta=c["pianeta"].upper(),
+            mondo = c["mondo"].upper()
+            if mondo not in C.CIFRARI:
+                err(f"{dove(b, 'mondo')}: mondo  {c['mondo']}  non ha un cifrario. I mondi che scrivono sono: "
+                    f"{', '.join(C.CIFRARI)}.")
+            w = norm_parola(c["parola"])
+            if w != c["parola"].strip().upper():
+                # l'alfabeto kindler non ha accenti ne' spazi: "Monte Alto" si cifra MONTEALTO,
+                # e chi la digita nell'app la ritrova lo stesso. Ma va detto, non fatto di nascosto.
+                avv(f"{dove(b, 'parola')}: {c['parola'].strip()} viene cifrata come {w} "
+                    f"(l'alfabeto kindler non ha accenti, spazi ne' segni). Nel foglio chiavi la trovi cosi'.")
+            parole.append(dict(b=b, parola=w, scritta=c["parola"].strip(),
+                               pianeta=c["pianeta"].upper(), mondo=mondo,
                                apre=c.get("apre", "").upper(), nota=corpo_di(b)))
         elif t == "LOG":
             if not corpo_di(b):
@@ -379,26 +481,38 @@ def main():
         if x["pianeta"] not in P:
             err(f"{dove(x['b'], 'pianeta')}: il pianeta  {x['pianeta']}  non esiste. Pianeti definiti: {', '.join(P) or 'nessuno'}.")
 
-    # ---- 1. ogni parola fra graffe ha il suo blocco PAROLA, sullo stesso pianeta
-    occorrenze = []                                   # (testo, parola, riga)
+    # ---- 1. ogni parola fra graffe ha il suo blocco PAROLA, sul pianeta dove compare
+    occorrenze = []                                   # (testo, parola, riga, com'era scritta)
     for t in testi:
         for pz in t["pezzi"]:
-            if pz[0] == "p" and pz[1] and not re.search(r"\s", pz[1]):
-                occorrenze.append((t, pz[1], pz[2]))
-    for t, w, riga in occorrenze:
-        if t["pianeta"] in P and t["pianeta"] not in C.CIFRARI:
-            err(f"riga {riga}, === TESTO === {t['id']}: {{{w}}} e' fra graffe, ma il pianeta {t['pianeta']} non ha un cifrario "
-                f"(cifrari.py conosce {', '.join(C.CIFRARI)}).")
-        elif (w, t["pianeta"]) not in coppie:
+            if pz[0] == "p" and norm_parola(pz[1]):
+                occorrenze.append((t, norm_parola(pz[1]), pz[2], pz[1]))
+    voce_di = {(w["parola"], w["pianeta"]): w for w in parole}
+    parole_note = {w["parola"] for w in parole}
+    for t, w, riga, grezza in occorrenze:
+        if (w, t["pianeta"]) not in voce_di:
             stesso = sorted(x["parola"] for x in parole if x["pianeta"] == t["pianeta"])
             simili = difflib.get_close_matches(w, stesso, 2)
             altrove = sorted({x["pianeta"] for x in parole if x["parola"] == w})
             consiglio = (f" Forse volevi {' o '.join(simili)}?" if simili else "") + \
                         (f" C'e' un blocco per {', '.join(altrove)}: una parola vuole un blocco per ogni pianeta su cui compare." if altrove else "")
-            err(f"riga {riga}, === TESTO === {t['id']}: {{{w}}} non ha un blocco  === PAROLA ===  per {t['pianeta']}.{consiglio} "
-                f"Se e' una parola nuova, aggiungi:  === PAROLA ===  parola: {w}  pianeta: {t['pianeta']}")
+            err(f"riga {riga}, === TESTO === {t['id']}: {{{grezza}}} non ha un blocco  === PAROLA ===  per {t['pianeta']}.{consiglio} "
+                f"Se e' una parola nuova, aggiungi:  === PAROLA ===  parola: {grezza}  pianeta: {t['pianeta']}  mondo: ...")
 
-    # ---- 3 e 4. le citazioni, che su Polis e Iris portano la chiave
+    # ---- il mondo che ha scritto una parola e' uno solo: e' il simbolo che le sta accanto,
+    #      e decide il cifrario ovunque la parola compaia
+    mondo_di = {}
+    for w in parole:
+        if not w["mondo"]:
+            continue
+        if w["parola"] in mondo_di and mondo_di[w["parola"]][0] != w["mondo"]:
+            altro = mondo_di[w["parola"]]
+            err(f"{dove(w['b'], 'mondo')}: {w['parola']} qui e' di {w['mondo']}, alla riga {altro[1]['riga']} e' di {altro[0]}. "
+                f"Il simbolo di una parola e' uno solo: la stessa parola si legge nello stesso modo su tutti i pianeti.")
+        mondo_di.setdefault(w["parola"], (w["mondo"], w["b"]))
+
+    # ---- 3 e 4. le citazioni. Con le regole nuove non portano piu' nessuna chiave:
+    # restano per il rimando che l'app mostra in fondo al testo, e devono esistere.
     sigilli = {t["id"] for t in testi}
     log_id = {L["id"] for L in logs}
     apre_log = {}                                      # LOG -> parole che lo aprono
@@ -408,38 +522,53 @@ def main():
                 err(f"{dove(w['b'], 'apre')}: apre  {w['apre']}, ma quella voce di registro non esiste. "
                     f"Voci definite: {', '.join(sorted(log_id)) or 'nessuna'}.")
             apre_log.setdefault(w["apre"], set()).add(w["parola"])
-    for t in testi:
-        b = t["b"]
-        if t["pianeta"] == "POLIS":
-            if not t["cita"]:
-                err(f"{dove(b)}: un testo di Polis deve avere  cita:  con il sigillo di un altro testo: il suo numero e' la chiave.")
-            elif t["cita"] not in sigilli:
-                err(f"{dove(b, 'cita')}: cita  {t['cita']}, ma nessun testo ha quel sigillo.")
-            elif t["cita"] == t["id"]:
-                err(f"{dove(b, 'cita')}: un testo di Polis cita se stesso: la chiave sarebbe il suo numero, come su Husa. Cita un altro sigillo.")
-        elif t["pianeta"] == "IRIS":
-            if not t["cita"]:
-                err(f"{dove(b)}: un testo di Iris deve avere  cita:  con una voce di registro: la parola che la apre e' la chiave.")
-            elif t["cita"] not in log_id:
-                err(f"{dove(b, 'cita')}: cita  {t['cita']}, ma quella voce di registro non esiste.")
-            elif not apre_log.get(t["cita"]):
-                err(f"{dove(b, 'cita')}: cita  {t['cita']}, ma nessuna PAROLA la apre (apre: {t['cita']}): "
-                    f"su Iris quella parola e' la chiave, e senza non c'e' chiave.")
-            elif len(apre_log[t["cita"]]) > 1:
-                err(f"{dove(b, 'cita')}: {t['cita']} e' aperta da piu' parole ({', '.join(sorted(apre_log[t['cita']]))}): "
-                    f"su Iris la chiave sarebbe ambigua. Una voce citata da Iris la apre una parola sola.")
-        elif t["cita"] and t["cita"] not in sigilli and t["cita"] not in log_id:
-            err(f"{dove(b, 'cita')}: cita  {t['cita']}, che non e' ne' un sigillo ne' una voce di registro.")
 
-    # ---- 5. ogni pianeta insegna il suo alfabeto e il suo ordine
+    risolte = {}
+    def citate(t):
+        """La riga  cita:  di un testo, risolta una volta sola: (sigilli, voci di registro, parole)."""
+        if t["id"] in risolte:
+            return risolte[t["id"]]
+        sig = [x for x in t["cita"] if x in sigilli]
+        voci = [x for x in t["cita"] if x in log_id]
+        dette = [norm_parola(x) for x in t["cita"] if norm_parola(x) in parole_note]
+        for x in t["cita"]:
+            if x not in sigilli and x not in log_id and norm_parola(x) not in parole_note:
+                err(f"{dove(t['b'], 'cita')}: cita  {x}, che non e' ne' un sigillo, ne' una voce di registro, ne' una parola chiave.")
+        risolte[t["id"]] = (sig, voci, dette)
+        return risolte[t["id"]]
+
+    for t in testi:
+        citate(t)                                      # basta che quello che cita esista
+
+    # ---- 5. ogni pianeta insegna le sue tre regole, e le due frasi si trovano li' dentro
+    IL = {"alfabeto": "l'alfabeto", "ordine": "l'ordine", "chiave": "la chiave"}
     for p in cifrati:
-        for parte in ("alfabeto", "ordine"):
-            if not any(t["pianeta"] == p["id"] and t["tipo"] == "propedeutico" and parte in t["rivela"] for t in testi):
-                err(f"{dove(p['b'])}: {p['nome']} non ha un testo propedeutico che riveli l'{parte}. "
-                    f"Serve almeno un  === TESTO ===  con  pianeta: {p['id']},  tipo: propedeutico,  rivela: {parte}.")
+        for parte in PARTI:
+            propedeutici = [t for t in testi if t["pianeta"] == p["id"] and t["tipo"] == "propedeutico" and parte in t["rivela"]]
+            if not propedeutici:
+                err(f"{dove(p['b'])}: {p['nome']} non ha un testo propedeutico che riveli {IL[parte]}"
+                    + (f" ({PROCEDIMENTO[p['id']]})" if parte == "chiave" else "")
+                    + f". Serve almeno un  === TESTO ===  con  pianeta: {p['id']},  tipo: propedeutico,  rivela: {parte}.")
+                continue
+            cod = p.get("codice_" + parte, "")          # la chiave non ha una frase da digitare: e' una regola
+            if cod and not any(contiene_codice(chiaro_di(t), cod) for t in propedeutici):
+                err(f"{dove(p['b'], 'codice_' + parte)}: la frase  {cod}  non compare in nessuno dei testi propedeutici di "
+                    f"{p['nome']} ({', '.join(t['id'] for t in propedeutici)}). I giocatori la digitano: se non e' scritta "
+                    f"da qualche parte, non la troveranno mai.")
+
+    # ---- le rune: devono essere parole che il tavolo puo' davvero avere in mano
+    for p in pianeti:
+        for r in p["rune"]:
+            if r not in parole_note:
+                err(f"{dove(p['b'], 'rune')}: fra le rune di {p['nome']} c'e' {r}, che non e' una parola chiave. "
+                    f"Le rune si posano alla fine: devono essere parole che il tavolo ha decifrato.")
+        mondi = [mondo_di[r][0] for r in p["rune"] if r in mondo_di]
+        if len(p["rune"]) > 1 and len(set(mondi)) < len(mondi):
+            doppi = sorted({m for m in mondi if mondi.count(m) > 1})
+            avv(f"{dove(p['b'], 'rune')}: le rune di {p['nome']} non vengono da mondi diversi "
+                f"({', '.join(doppi)} compare piu' di una volta): per averle tutte bastera' meno di tre pianeti.")
 
     # ---- 7. gli enigmi si aprono con parole che esistono
-    parole_note = {w["parola"] for w in parole}
     enigma_di = {}
     for E in enigmi:
         if E["parola"] not in parole_note:
@@ -474,62 +603,112 @@ def main():
                 s["griglia"] = next((k for k, g in griglie.items() if g["tipo"] == s["puzzle"] and g.get("porta")), "")
 
     # ---- 2. le chiavi, occorrenza per occorrenza, e le guardie di cifrari.py
-    def chiave_per(t):
-        if t["pianeta"] == "HUSA":
-            return numero_sigillo(t["id"])
-        if t["pianeta"] == "POLIS":
-            return numero_sigillo(t["cita"]) if t["cita"] in sigilli else None
-        if t["pianeta"] == "IRIS":
-            w = apre_log.get(t["cita"], set())
-            return C.chiave_da_parola(next(iter(w))) if len(w) == 1 else None
-        return None
-    cifrate = []                                       # (testo, parola, riga, chiave, cifrato)
-    for t, w, riga in occorrenze:
-        if t["pianeta"] not in C.CIFRARI:
-            continue
-        k = chiave_per(t)
-        if k is None:
-            continue                                   # l'errore sulla citazione e' gia' stato detto
-        guai = C.controlla_parola(t["pianeta"], w, k)
-        for g in guai:
-            err(f"riga {riga}, === TESTO === {t['id']}: {{{w}}} su {t['pianeta']} con chiave {k}: {g}.")
-        if not guai:
-            c = C.cifra(t["pianeta"], w, k)
-            if C.decifra(t["pianeta"], c, k) != w:
-                err(f"riga {riga}: {w} cifrata e decifrata non torna uguale. E' un guasto di cifrari.py: non stampare niente.")
-            cifrate.append((t, w, riga, k, c))
+    # Il cifrario e' quello del MONDO della parola (il simbolo che le sta accanto), non del
+    # pianeta dove la parola compare: e' cosi' che per leggere tutto servono tutti e tre.
+    def prima_parola(t):
+        """La prima parola in chiaro del reperto: quella che si legge per prima, graffe escluse."""
+        for pz in t["pezzi"]:
+            if pz[0] == "c":
+                m = re.search(r"[A-Za-zÀ-ÿ]+", pz[1])
+                if m:
+                    return norm_parola(m.group(0))
+        return ""
 
-    # ---- raggiungibilita': ogni parola si puo' aprire, partendo da quello che si legge
-    # Husa e Polis hanno chiavi numeriche, sempre alla portata; su Iris la chiave e'
-    # una parola, che dev'essere gia' aperta.
-    aperte, cambiato = set(), True
-    while cambiato:
-        cambiato = False
-        for t, w, riga, k, c in cifrate:
-            if w in aperte:
-                continue
-            if t["pianeta"] != "IRIS" or next(iter(apre_log[t["cita"]])) in aperte:
-                aperte.add(w); cambiato = True
-    for w in sorted({w for _, w, _, _, _ in cifrate} - aperte):
-        chi = sorted({f"{t['id']} (chiave: la parola che apre {t['cita']})" for t, x, _, _, _ in cifrate if x == w})
-        err(f"la parola {w} non si potra' mai aprire: compare solo su Iris, in {', '.join(chi)}, e quella parola "
-            f"a sua volta non si apre. Metti la parola-chiave anche in un testo di Husa o di Polis, o cambia la citazione.")
+    def chiave_per(mondo, t, posto, parola):
+        """La regola del mondo, applicata con quello che il tavolo ha davanti.
+           -> (chiave, come si trova) oppure (None, perche' non si puo')"""
+        n = numero_sigillo(t["id"])
+        if mondo == "HUSA":
+            return ((n + len(parola), f"{n} di {t['id']} + {len(parola)} lettere") if n is not None
+                    else (None, "il sigillo non ha un numero"))
+        if mondo == "POLIS":
+            return ((n * posto, f"{n} di {t['id']} x {posto}ª parola") if n is not None
+                    else (None, "il sigillo non ha un numero"))
+        if mondo == "IRIS":
+            p = prima_parola(t)
+            return ((C.chiave_da_parola(p), f"la prima parola del reperto: {p}") if p
+                    else (None, "il reperto non comincia con una parola in chiaro"))
+        return None, "mondo senza cifrario"
+
+    # il posto della parola nel suo testo: 1a, 2a, 3a parola cifrata, nell'ordine in cui si leggono
+    posti, quante = [], {}
+    for t, w, riga, grezza in occorrenze:
+        quante[t["id"]] = quante.get(t["id"], 0) + 1
+        posti.append(quante[t["id"]])
+    cifrate = []                                       # (testo, parola, riga, mondo, chiave, come, cifrato, posto)
+    for (t, w, riga, grezza), posto in zip(occorrenze, posti):
+        mondo = mondo_di.get(w, (None,))[0]
+        if not mondo or (w, t["pianeta"]) not in voce_di:
+            continue                                   # l'errore e' gia' stato detto
+        k, come = chiave_per(mondo, t, posto, w)
+        if not k:
+            err(f"riga {riga}, === TESTO === {t['id']}: {{{grezza}}} e' scritta da {mondo}, ma la sua chiave "
+                f"non si puo' trovare: {come}"
+                + (" -- nessuna delle sue lettere sta nell'alfabeto kindler" if k == [] else "") + ".")
+            continue
+        guai = C.controlla_parola(mondo, w, k)
+        for g in guai:
+            err(f"riga {riga}, === TESTO === {t['id']}: {{{grezza}}} e' scritta da {mondo} e qui la sua chiave e' "
+                f"{come}: {g}.")
+        if not guai:
+            c = C.cifra(mondo, w, k)
+            if C.decifra(mondo, c, k) != w:
+                err(f"riga {riga}: {w} cifrata e decifrata non torna uguale. E' un guasto di cifrari.py: non stampare niente.")
+            cifrate.append((t, w, riga, mondo, k, come, c, posto))
+
+    # ---- raggiungibilita': con le tre regole nuove ogni chiave si trova guardando il reperto
+    # che si ha in mano, quindi basta che la parola compaia da qualche parte.
+    aperte = {x[1] for x in cifrate}
     for E in enigmi:
         if E["parola"] in parole_note and E["parola"] not in aperte:
             err(f"{dove(E['b'], 'parola')}: si apre con {E['parola']}, che non e' fra graffe in nessun testo "
                 f"da cui si possa decifrare: il luogo non si aprirebbe mai.")
     for w in parole:
-        if not any(x == w["parola"] and t["pianeta"] == w["pianeta"] for t, x, _ in occorrenze):
+        if not any(x == w["parola"] and t["pianeta"] == w["pianeta"] for t, x, _, _ in occorrenze):
             avv(f"{dove(w['b'])}: {w['parola']} non compare fra graffe in nessun testo di {w['pianeta']}.")
     for L in logs:
         if L["id"] not in apre_log:
             avv(f"{dove(L['b'])}: nessuna parola apre {L['id']} (apre: {L['id']}): nell'app non si leggera' mai.")
 
+    # ---- la scala: quanto chiede ogni sigillo ORA, quanto POI, e se la salita sale
+    peso_ora, peso_poi, parole_di = {}, {}, {}
+    for t, w, riga, mondo, k, come, c, posto in cifrate:
+        passi = len(k) if isinstance(k, (list, tuple)) else 1
+        mio = mondo == t["pianeta"]
+        quale = peso_ora if mio else peso_poi
+        quale[t["id"]] = quale.get(t["id"], 0) + len(w) + passi
+        parole_di.setdefault(t["id"], []).append((w, mio))
+    for t in testi:
+        peso_ora.setdefault(t["id"], 0)
+        peso_poi.setdefault(t["id"], 0)
+    scala = {t["id"]: livello_di(peso_ora[t["id"]]) for t in testi}
+    # dentro un pianeta, i sigilli si trovano nell'ordine del loro numero: e' quello il percorso.
+    discese = []
+    for p in pianeti:
+        suoi = sorted((t for t in testi if t["pianeta"] == p["id"] and peso_ora[t["id"]]),
+                      key=lambda t: (numero_sigillo(t["id"]) or 0))
+        for prima, dopo in zip(suoi, suoi[1:]):
+            if scala[dopo["id"]] < scala[prima["id"]] - 1:
+                discese.append((p, prima, dopo))
+    for p, prima, dopo in discese:
+        avv(f"{dove(dopo['b'])}: su {p['nome']} la salita scende da livello {scala[prima['id']]} "
+            f"({prima['id']}, peso {peso_ora[prima['id']]}) a livello {scala[dopo['id']]} "
+            f"(peso {peso_ora[dopo['id']]}). Se deve essere una salita, scambia i due numeri di "
+            f"sigillo, o sposta una parola in un altro reperto.")
+
     # ---- 6. una parola chiave non compare in chiaro altrove: cifrarla non servirebbe
-    chiave_di = sorted({w for _, w, _ in occorrenze} | parole_note)
+    chiave_di = sorted({x[1] for x in occorrenze} | parole_note)
     campi_pubblici = []
     for t in testi:
         campi_pubblici.append((t["b"], "titolo", t["titolo"]))
+        # luogo: e posto: non arrivano ai giocatori (restano nel foglio del narratore),
+        # ma se nominano una parola chiave e' facile che prima o poi finiscano stampati:
+        # meglio un avviso adesso che una parola regalata la sera.
+        for campo in ("luogo", "posto"):
+            for w in parole_note:
+                if t[campo] and parola_intera(w, t[campo]):
+                    avv(f"{dove(t['b'], campo)}: {campo}  nomina la parola chiave {w} in chiaro. "
+                        f"Non esce dai tuoi fogli, ma non stamparlo su niente che tocchino loro.")
         for pz in t["pezzi"]:
             if pz[0] == "c":
                 campi_pubblici.append((t["b"], None, pz[1]))
@@ -552,14 +731,22 @@ def main():
                 err(f"riga {riga}, === {b['tipo']} === {b['campi'].get(NOME_DI[b['tipo']], '').upper()}: la parola chiave {w} "
                     f"compare in chiaro{' nel campo ' + campo if campo else ''}. Cifrarla altrove non servirebbe: "
                     f"mettila fra graffe anche qui, oppure toglila.")
-    # e un codice delle regole non puo' stare in un testo: dati.js e' pubblico (§4.2)
+    # Le frasi delle regole stanno in chiaro nei testi propedeutici: e' li' che i giocatori
+    # le trovano (decisione di Alessandro). Percio' finiscono anche in dati.js, e il
+    # repository non puo' restare pubblico: alla fine della costruzione c'e' l'avviso.
+    # Qui si controlla solo che una frase non sia sparsa dove non deve stare.
+    suo_propedeutico = {}
     for p, parte, cod in codici:
+        for t in testi:
+            if t["pianeta"] == p["id"] and t["tipo"] == "propedeutico" and parte in t["rivela"]:
+                suo_propedeutico.setdefault((p["id"], parte), set()).add(t["b"]["riga"])
+    for p, parte, cod in codici:
+        giuste = suo_propedeutico.get((p["id"], parte), set())
         for b, campo, testo in campi_pubblici:
-            spaz = " " + " ".join(re.findall(r"[A-Z0-9]+", senza_accenti(testo or "").upper())) + " "
-            parti = re.findall(r"[A-Z0-9]+", senza_accenti(cod).upper())
-            if (" " + " ".join(parti) + " ") in spaz or (" " + "".join(parti) + " ") in spaz:
-                err(f"{dove(b, campo)}: contiene in chiaro il codice dell'{parte} di {p['id']}. dati.js e' pubblico: "
-                    f"un codice li' dentro e' un codice regalato. Fallo arrivare ai giocatori in un altro modo.")
+            if b["riga"] in giuste or not contiene_codice(testo, cod):
+                continue
+            err(f"{dove(b, campo)}: contiene la frase dell'{parte} di {p['id']}. Quella frase va detta una volta "
+                f"sola, nel testo propedeutico di {p['nome']}: altrove e' un codice regalato.")
 
     if ERRORI:
         print("\n  NON HO COSTRUITO NIENTE. Da correggere in contenuti.md:\n")
@@ -568,33 +755,65 @@ def main():
         print()
         return 1
 
+    # il codice opaco con cui si apre ogni reperto
+    presi = set()
+    codice_di = {t["id"]: codice_sigillo(t["id"], presi) for t in testi}
+
     # ------------------------------------------------------------------ dati.js
     ordine = {p["id"]: i for i, p in enumerate(pianeti)}
+    # La sigla di una parola e' PIANETA-lettera (HUSA-A, HUSA-B...): LETTERE, non numeri,
+    # perche' i sigilli sono PIANETA-numero e sul foglio del narratore si confonderebbero.
     id_parola, contatore = {}, {}
     for w in parole:
-        contatore[w["pianeta"]] = contatore.get(w["pianeta"], 0) + 1
-        id_parola[(w["parola"], w["pianeta"])] = f"{w['pianeta']}-{contatore[w['pianeta']]}"
-    cifrato_di = {(t["id"], riga, w): c for t, w, riga, k, c in cifrate}
+        n = contatore[w["pianeta"]] = contatore.get(w["pianeta"], 0) + 1
+        sigla = ""
+        while n:
+            n, r = divmod(n - 1, 26)
+            sigla = chr(65 + r) + sigla
+        id_parola[(w["parola"], w["pianeta"])] = f"{w['pianeta']}-{sigla}"
+    # la forma cifrata dipende anche dal posto della parola nel testo: si indicizza cosi'
+    cifrato_di = {(t["id"], posto): c for t, w, riga, mondo, k, come, c, posto in cifrate}
     dati_testi = []
     for t in testi:
-        corpo = []
+        corpo, n = [], 0
         for pz in t["pezzi"]:
             if pz[0] == "c":
                 corpo.append({"t": "c", "v": pz[1]})
             else:
-                corpo.append({"t": "p", "w": id_parola[(pz[1], t["pianeta"])], "c": cifrato_di[(t["id"], pz[2], pz[1])]})
-        # cita: vero o falso, mai il sigillo citato: su Polis sarebbe la chiave in chiaro
-        dati_testi.append({"id": t["id"], "pianeta": t["pianeta"], "titolo": t["titolo"], "tipo": t["tipo"],
+                n += 1
+                w = norm_parola(pz[1])
+                # k e come: le note del narratore. NON sono la soluzione: senza alfabeto e
+                # ordine la chiave non apre niente, e quelli in dati.js non ci sono (solo
+                # le loro impronte). La parola in chiaro resta fuori di qui, sempre.
+                x = next((y for y in cifrate if y[0] is t and y[7] == n), None)
+                corpo.append({"t": "p", "w": id_parola[(w, t["pianeta"])], "c": cifrato_di[(t["id"], n)],
+                              "k": ("-".join(map(str, x[4])) if isinstance(x[4], (list, tuple)) else str(x[4])) if x else "",
+                              "come": x[5] if x else ""})
+        # cita: vero o falso, mai il riferimento: il rimando lo devono leggere loro
+        # rivela: serve all'app del Custode, che apre lo strumento della chiave di un
+        # mondo solo dopo che QUEL telefono ha scansionato il reperto che la spiega.
+        dati_testi.append({"id": t["id"], "codice": codice_di[t["id"]], "rivela": t["rivela"],
+                           "pianeta": t["pianeta"], "titolo": t["titolo"], "tipo": t["tipo"],
                            "cita": bool(t["cita"]), "corpo": corpo})
     dati = {
         "schema": 2,
+        # Come si scrive un reperto: la console lo mostra in simboli, che e' la forma in cui
+        # il tavolo lo vede. Non e' un segreto - l'app il testo in chiaro lo da' a chiunque
+        # scansioni - ma senza questa tabella non potrebbe disegnarlo.
+        "simboli": SIM.MAPPA,
+        # Il QR di ogni codice, impacchettato bit a bit: l'app non sa disegnarne uno da se',
+        # e il narratore deve poterlo mostrare dallo schermo invece che su carta.
+        "qr": {t["id"]: qr_compatto(codice_di[t["id"]]) for t in testi},
         "pianeti": [dict({"id": p["id"], "nome": p["nome"], "tema": p["tema"], "meccanica": p["meccanica"],
-                          "mecc_desc": p["mecc_desc"]},
+                          "mecc_desc": p["mecc_desc"], "simbolo": p["simbolo"]},
                          **({"alfabeto_hash": impronta(norm_codice(p["codice_alfabeto"])),
                              "ordine_hash": impronta(norm_codice(p["codice_ordine"]))} if p["id"] in C.CIFRARI else {}))
                     for p in pianeti],
         "testi": dati_testi,
-        "parole": [{"id": id_parola[(w["parola"], w["pianeta"])], "pianeta": w["pianeta"], "hash": impronta(w["parola"]),
+        # mondo: il simbolo accanto alla parola, cioe' quale cifrario la apre. Non e' un segreto:
+        # sta sul muro, e serve al tavolo per sapere quali codici prendere.
+        "parole": [{"id": id_parola[(w["parola"], w["pianeta"])], "pianeta": w["pianeta"], "mondo": w["mondo"],
+                    "hash": impronta(w["parola"]),
                     "apre_log": w["apre"] or None, "apre_enigma": enigma_di.get(w["parola"]), "nota": w["nota"] or None}
                    for w in sorted(parole, key=lambda x: ordine.get(x["pianeta"], 99))],
         "log": [{"id": L["id"], "pianeta": L["pianeta"], "titolo": L["titolo"], "corpo": L["corpo"]} for L in logs],
@@ -606,27 +825,138 @@ def main():
     js = ("// GENERATO DA costruisci.py — non modificare a mano\n"
           "window.DATI = " + json.dumps(dati, ensure_ascii=False, indent=1) + ";\n")
 
+    # ------------------------------------------------------------------ il percorso
+    # L'ordine dei blocchi PIANETA e' la rotta: arrivando su un mondo se ne imparano le tre
+    # regole, e da quel momento ogni parola con quel simbolo si apre, anche nei reperti gia'
+    # letti altrove. Qui si dice, tappa per tappa, cosa si apre davvero.
+    dove_sta = {}
+    for t, w, riga, mondo, k, come, c, posto in cifrate:
+        dove_sta.setdefault(w, set()).add(t["id"])
+    percorso, noti, viste, aperte_fin_qui = [], set(), set(), set()
+    for p in pianeti:
+        if p["id"] in C.CIFRARI:
+            noti.add(p["id"])
+        viste.add(p["id"])
+        nuove = sorted({w for w in dove_sta if mondo_di.get(w, ("",))[0] in noti} - aperte_fin_qui)
+        aperte_fin_qui |= set(nuove)
+        sue = lambda t: [w for w, mio in parole_di.get(t["id"], ())]
+        qui = [t for t in testi if t["pianeta"] in viste]
+        meta = [t for t in qui if any(w not in aperte_fin_qui for w in sue(t))]
+        mancano = sorted({mondo_di[w][0] for t in meta for w in sue(t)
+                          if w not in aperte_fin_qui and w in mondo_di})
+        percorso.append({
+            "pianeta": p["id"], "nome": p["nome"], "simbolo": p["simbolo"],
+            "impara": p["id"] if p["id"] in C.CIFRARI else "",
+            "parole": [{"parola": w, "mondo": mondo_di.get(w, ("",))[0],
+                        "dove": sorted(dove_sta[w]),
+                        "apre": ", ".join(sorted({x["apre"] for x in parole if x["parola"] == w and x["apre"]}
+                                                 | ({enigma_di[w]} if w in enigma_di else set())))}
+                       for w in nuove],
+            "luoghi": [E["id"] for E in enigmi if E["parola"] in nuove],
+            "porte": [s["id"] for s in stanze if s["pianeta"] == p["id"]],
+            "a_meta": [t["id"] for t in meta], "mancano": mancano,
+        })
+
     # ------------------------------------------------------------------ il foglio del narratore
     usa = lambda p: next((x for x in pianeti if x["id"] == p), {"nome": p})["nome"]
     fm = ["# CHIAVI — solo per il narratore", "",
           "Non pubblicare questo file. Generato da costruisci.py: le modifiche vanno in contenuti.md.", "",
           "## I codici delle regole", "",
-          "| Pianeta | Alfabeto · Decifratore | Ordine · Apritore | Chiave · Consultatore |", "|---|---|---|---|"]
+          "| Mondo | Alfabeto · Traduttore | Ordine · Apritore | Chiave · Custode |", "|---|---|---|---|"]
     for p in cifrati:
         fm.append(f"| {p['nome']} | `{p['codice_alfabeto']}` | `{p['codice_ordine']}` | {PROCEDIMENTO.get(p['id'], '')} |")
-    fm += ["", "## Le parole, testo per testo", "",
-           "La sigla (HUSA-1...) e' quella che la console mostra nel pannello Parole aperte.", ""]
+    fm += ["", "## I simboli", "",
+           "Il simbolo accanto a una parola dice chi l'ha scritta, e quindi con quale cifrario si apre.", ""]
+    for p in cifrati:
+        mie = sorted({w["parola"] for w in parole if w["mondo"] == p["id"]})
+        fm.append(f"- **{p['simbolo']}  {p['nome']}** — {', '.join(mie) if mie else 'nessuna parola'}")
+    posa = [t for t in testi if t["luogo"] or t["posto"]]
+    if posa:
+        fm += ["", "## Dove va ogni sigillo", "",
+               "La lista di posa: stampa, taglia, e vai in giro con questa. La coordinata e'",
+               "quella della mappa (colonna + riga).", ""]
+        for p in pianeti:
+            suoi = [t for t in posa if t["pianeta"] == p["id"]]
+            if not suoi:
+                continue
+            fm += [f"### {p['simbolo']} {p['nome']}", ""]
+            for lg in dict.fromkeys(t["luogo"] for t in suoi):
+                fm += [f"**{lg or '(senza locazione)'}**", "",
+                       "| Sigillo | N. | Codice | Punto | Livello |", "|---|---|---|---|---|"]
+                for t in [x for x in suoi if x["luogo"] == lg]:
+                    fm.append(f"| {t['id']} | {numero_sigillo(t['id']) or '—'} | `{codice_di[t['id']]}` |"
+                              f" {t['posto'] or '—'} | {scala[t['id']]} |")
+                fm.append("")
+    fm += ["", "## Il percorso", "",
+           "L'ordine dei blocchi PIANETA in contenuti.md e' la rotta. A ogni tappa si imparano",
+           "le tre regole di quel mondo, e da li' in poi ogni parola con quel simbolo si apre,",
+           "anche nei reperti letti prima altrove.", "",
+           "| Tappa | Si aprono | Luoghi | Porte | Restano a meta' |", "|---|---|---|---|---|"]
+    for i, tappa in enumerate(percorso, 1):
+        if not (tappa["parole"] or tappa["luoghi"] or tappa["porte"]):
+            continue
+        fm.append(f"| {i}. {tappa['simbolo']} {tappa['nome']} "
+                  f"| {', '.join(w['parola'] for w in tappa['parole']) or '—'} "
+                  f"| {', '.join(tappa['luoghi']) or '—'} "
+                  f"| {', '.join(tappa['porte']) or '—'} "
+                  f"| {len(tappa['a_meta'])}"
+                  + (f" (manca {', '.join(usa(m) for m in tappa['mancano'])})" if tappa["mancano"] else "") + " |")
+    fm += ["", "## La salita", "",
+           "Il peso di una parola sono le lettere da trasformare piu' i passi della chiave.",
+           "**Ora** = le parole che quel mondo ha scritto da se': si aprono alla prima visita, ed e'",
+           "questa la difficolta' che il tavolo sente. **Poi** = le parole di un altro mondo, che",
+           "restano chiuse finche' non si e' stati la'. Un sigillo pesante di Poi non e' un muro:",
+           "si apre a meta' e si riapre al ritorno. Fra parentesi, appunto, le parole del ritorno.", ""]
+    for p in pianeti:
+        tutti = [t for t in testi if t["pianeta"] == p["id"]]
+        suoi = sorted((t for t in tutti if peso_ora[t["id"]] or peso_poi[t["id"]]),
+                      key=lambda t: (numero_sigillo(t["id"]) or 0))
+        if not suoi:
+            continue
+        letti = [t for t in tutti if not (peso_ora[t["id"]] or peso_poi[t["id"]])]
+        fm += [f"### {p['nome']}", "", "| Sigillo | Livello | Ora | Poi | Parole |", "|---|---|---|---|---|"]
+        for t in suoi:
+            fm.append(f"| {t['id']} | {scala[t['id']]} · {NOME_LIVELLO[scala[t['id']]]} "
+                      f"| {peso_ora[t['id']]} | {peso_poi[t['id']] or TRATTO} | "
+                      + ", ".join(w if mio else f"({w})" for w, mio in parole_di[t["id"]]) + " |")
+        if letti:
+            fm.append(f"| {', '.join(t['id'] for t in letti)} | 0 · lettura | 0 | {TRATTO} | {TRATTO} |")
+        fm.append("")
+    if discese:
+        fm += ["**La salita scende qui:**", ""] + [
+            f"- {p['nome']}: {prima['id']} (livello {scala[prima['id']]}) poi {dopo['id']} "
+            f"(livello {scala[dopo['id']]})" for p, prima, dopo in discese] + [""]
+    fm += ["## Le parole, testo per testo", "",
+           "La sigla (HUSA-A...) e' quella che la console mostra nel pannello Parole aperte:",
+           "lettere, mentre i sigilli hanno numeri.", ""]
     for t in testi:
         mie = [x for x in cifrate if x[0] is t]
         if not mie:
             continue
-        fm += [f"### {t['id']} · {t['titolo']} ({usa(t['pianeta'])})", "",
-               "| Sigla | Nel testo | Parola | Chiave | Apre |", "|---|---|---|---|---|"]
-        for _, w, riga, k, c in mie:
-            v = next(x for x in parole if x["parola"] == w and x["pianeta"] == t["pianeta"])
-            chiave = (f"{k}" if not isinstance(k, list) else f"{next(iter(apre_log[t['cita']]))} ({', '.join(map(str, k))})")
+        fm += [f"### {t['id']} · {t['titolo']} ({usa(t['pianeta'])}) — livello {scala[t['id']]}, "
+               f"peso {peso_ora[t['id']]} ora"
+               + (f" + {peso_poi[t['id']]} poi" if peso_poi[t["id"]] else ""), "",
+               "| Sigla | Nel testo | Parola | Scritta da | Chiave | Apre |", "|---|---|---|---|---|---|"]
+        for _, w, riga, mondo, k, come, c, posto in mie:
+            v = voce_di[(w, t["pianeta"])]
+            simbolo = next((x["simbolo"] for x in pianeti if x["id"] == mondo), "?")
+            chiave = come if isinstance(k, list) else f"{k} ({come})"
             apre = ", ".join(x for x in (v["apre"], (f"luogo {enigma_di[w]}" if w in enigma_di else "")) if x) or "—"
-            fm.append(f"| {id_parola[(w, t['pianeta'])]} | `{c}` | **{w}** | {chiave} | {apre} |")
+            fm.append(f"| {id_parola[(w, t['pianeta'])]} | `{c}` | **{w}** | {simbolo} {usa(mondo)} | {chiave} | {apre} |")
+        fm.append("")
+    rune = [(p, r) for p in pianeti for r in p["rune"]]
+    if rune:
+        fm += ["## Le rune", "",
+               "Si posano, non si digitano: le riconosci tu. Chi le ha decifrate le ha gia' nel registro.", ""]
+        for p in pianeti:
+            if not p["rune"]:
+                continue
+            fm.append(f"**{p['nome']}** — " + ", ".join(
+                f"**{r}** ({next((x['simbolo'] for x in pianeti if x['id'] == mondo_di.get(r, ('',))[0]), '?')} "
+                f"{usa(mondo_di.get(r, ('',))[0])})" for r in p["rune"]))
+            manca = [r for r in p["rune"] if r not in aperte]
+            if manca:
+                fm.append(f"- attenzione: {', '.join(manca)} non si decifra in nessun reperto.")
         fm.append("")
     if enigmi:
         fm += ["## Ingressi dei luoghi", ""] + [f"- **{E['nome']}** ({usa(E['pianeta'])}) — parola **{E['parola']}**" for E in enigmi] + [""]
@@ -638,18 +968,78 @@ def main():
                       + (VG.indicazioni(sol) if sol else "soluzione non calcolata"))
         fm.append("")
     fm += ["## Failsafe", "",
-           "Se il tavolo si blocca: leggi la parola da qui e considerala aperta. Il Consultatore la registra,",
+           "Se il tavolo si blocca: leggi la parola da qui e considerala aperta. Il Custode la registra,",
            "l'Apritore la digita all'ingresso: sui loro telefoni si apre come se l'avessero decifrata.", ""]
     master = "\n".join(fm)
 
+    # ------------------------------------------------------------------ soluzioni.json
+    # Tutto quello che il narratore puo' voler sapere, in forma leggibile da una macchina:
+    # lo rende pagina genera_master.py. Qui sta la verita', li' solo il disegno.
+    sol_sigilli = []
+    for t in testi:
+        pezzi, n = [], 0
+        for pz in t["pezzi"]:
+            if pz[0] == "c":
+                pezzi.append({"t": "c", "v": pz[1]})
+                continue
+            n += 1
+            w = norm_parola(pz[1])
+            x = next((y for y in cifrate if y[0] is t and y[7] == n), None)
+            if x is None:                              # scartata da una guardia: non c'e' cifrato
+                pezzi.append({"t": "c", "v": "{" + pz[1] + "}"})
+                continue
+            _, _, _, mondo, k, come, c, posto = x
+            pezzi.append({"t": "p", "parola": w, "sigla": id_parola[(w, t["pianeta"])], "cifrato": c,
+                          "mondo": mondo, "posto": posto, "come": come,
+                          "chiave": ("-".join(map(str, k)) if isinstance(k, (list, tuple)) else str(k)),
+                          "apre": ", ".join(x for x in (voce_di[(w, t["pianeta"])]["apre"],
+                                                        (enigma_di.get(w) or "")) if x)})
+        sol_sigilli.append({"id": t["id"], "pianeta": t["pianeta"], "titolo": t["titolo"], "tipo": t["tipo"],
+                            "luogo": t["luogo"], "posto": t["posto"], "codice": codice_di[t["id"]],
+                            "rivela": t["rivela"], "numero": numero_sigillo(t["id"]),
+                            "livello": scala[t["id"]], "peso_ora": peso_ora[t["id"]],
+                            "peso_poi": peso_poi[t["id"]], "pezzi": pezzi})
+    soluzioni = {
+        "percorso": percorso,
+        "scala": {"soglie": list(SCALA), "nomi": NOME_LIVELLO,
+                  "discese": [{"pianeta": p["id"], "prima": a["id"], "dopo": b["id"]} for p, a, b in discese]},
+        "pianeti": [{"id": p["id"], "nome": p["nome"], "tema": p["tema"], "meccanica": p["meccanica"],
+                     "simbolo": p["simbolo"], "mecc_desc": p["mecc_desc"],
+                     "codice_alfabeto": p["codice_alfabeto"], "codice_ordine": p["codice_ordine"],
+                     "procedimento": PROCEDIMENTO.get(p["id"], ""),
+                     "esempi": C.CIFRARI[p["id"]]["esempi"] if p["id"] in C.CIFRARI else {},
+                     "dice": C.CIFRARI[p["id"]]["dice"] if p["id"] in C.CIFRARI else {},
+                     "rune": [{"parola": r, "mondo": mondo_di.get(r, ("",))[0]} for r in p["rune"]],
+                     "alfabeto": C.CIFRARI[p["id"]]["alfabeto"][0] if p["id"] in C.CIFRARI else "",
+                     "ordine": C.CIFRARI[p["id"]]["ordine"][0] if p["id"] in C.CIFRARI else "",
+                     "parole": sorted({w["parola"] for w in parole if w["mondo"] == p["id"]})}
+                    for p in pianeti],
+        "sigilli": sol_sigilli,
+        "parole": [{"parola": w["parola"], "sigla": id_parola[(w["parola"], w["pianeta"])],
+                    "pianeta": w["pianeta"], "mondo": w["mondo"], "impronta": impronta(w["parola"]),
+                    "apre_log": w["apre"] or "", "apre_enigma": enigma_di.get(w["parola"], ""),
+                    "dove": sorted({t["id"] for t, x, _, _ in occorrenze if x == w["parola"]})}
+                   for w in sorted(parole, key=lambda x: (ordine.get(x["pianeta"], 99), x["parola"]))],
+        "enigmi": [{"id": E["id"], "pianeta": E["pianeta"], "nome": E["nome"], "parola": E["parola"],
+                    "testo": E["testo"]} for E in enigmi],
+        "stanze": [{"id": s["id"], "pianeta": s["pianeta"], "nome": s["nome"], "puzzle": s["puzzle"],
+                    "griglia": s["griglia"], "sblocca": s["sblocca"],
+                    "dati": griglie.get(s["griglia"], {}),
+                    "soluzione": [list(x) for x in (esiti_griglie.get(s["griglia"], ([], None))[1] or [])],
+                    "indicazioni": (VG.indicazioni(esiti_griglie[s["griglia"]][1])
+                                    if esiti_griglie.get(s["griglia"], ([], None))[1] else "")}
+                   for s in stanze],
+        "costi": re.search(r"const COSTI = \{(.*?)\}", open("app.js", encoding="utf-8").read(), re.S).group(1).strip()
+                 if re.search(r"const COSTI = \{(.*?)\}", open("app.js", encoding="utf-8").read(), re.S) else "",
+    }
+
     # ------------------------------------------------------------------ i segreti
-    segreti = set(chiave_di)
-    for _, _, cod in codici:
-        segreti |= forme_codice(cod)
-    segreti = sorted(s for s in segreti if len(s) >= 3)
+    # Le frasi delle regole NON sono qui dentro: stanno per scelta nei testi propedeutici,
+    # quindi in dati.js. Quello che non deve uscire mai e' l'elenco delle parole in chiaro.
+    segreti = sorted(s for s in set(chiave_di) if len(s) >= 3)
 
     # ------------------------------------------------------------------ prima di scrivere: niente fughe
-    f_dati = fughe(dati, chiave_di, [c for _, _, c in codici])
+    f_dati = fughe(dati, chiave_di, [])
     for f in f_dati:
         err(f + ".")
     rigenerati = {"dati.js", "stampa.html", "prova-offline.html"}
@@ -665,9 +1055,9 @@ def main():
     # stampa.html si genera con qrcode: se manca, meglio saperlo adesso che dopo aver scritto dati.js
     if importlib.util.find_spec("qrcode") is None:
         err("manca il modulo Python qrcode, che serve a genera_stampe.py per disegnare i sigilli. Installalo:  pip install qrcode")
-    for g in ("genera_stampe.py", "genera_offline.py"):
+    for g in GENERATORI:
         if not os.path.exists(g):
-            err(f"manca {g}: senza, {'stampa.html' if 'stampe' in g else 'prova-offline.html'} resterebbe vecchio.")
+            err(f"manca {g}: senza, {GENERATORI[g]} resterebbe vecchio.")
     if ERRORI:
         print("\n  NON HO COSTRUITO NIENTE:\n")
         for e in ERRORI:
@@ -685,7 +1075,7 @@ def main():
     riletto = open("dati.js", encoding="utf-8").read()
     try:
         ricaricati = json.loads(re.sub(r"^.*?window\.DATI = ", "", riletto, flags=re.S).rstrip().rstrip(";"))
-        dopo = fughe(ricaricati, chiave_di, [c for _, _, c in codici])
+        dopo = fughe(ricaricati, chiave_di, [])      # le frasi delle regole ci stanno di proposito
     except ValueError as e:
         dopo = [f"dati.js riletto non e' JSON valido ({e})"]
     if dopo:
@@ -701,13 +1091,15 @@ def main():
         os.remove(copia)
     with open("CHIAVI-MASTER.md", "w", encoding="utf-8", newline="\n") as f:
         f.write(master)
+    with open("soluzioni.json", "w", encoding="utf-8", newline="\n") as f:
+        json.dump(soluzioni, f, ensure_ascii=False, indent=1)
     with open(".segreti", "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(segreti) + "\n")
 
     n_uniche = len({w["parola"] for w in parole})
     print(f"\n  Costruito: {len(pianeti)} pianeti, {len(testi)} testi, {len(cifrate)} parole cifrate nei testi "
           f"({n_uniche} parole distinte), {len(logs)} voci di registro, {len(enigmi)} luoghi, {len(stanze)} porte")
-    print("  Scritti: dati.js, CHIAVI-MASTER.md, .segreti")
+    print("  Scritti: dati.js, CHIAVI-MASTER.md, soluzioni.json, .segreti")
     for s in stanze:
         print(f"  porta {s['id']}: {s['puzzle']}, griglia {s['griglia']}"
               + (" (pannello d'insegnamento, facile di proposito)" if griglie.get(s["griglia"], {}).get("insegna") else ""))
@@ -715,11 +1107,11 @@ def main():
         print("  avviso:", a)
 
     # ------------------------------------------------------------------ stampe e copia offline
-    for g in ("genera_stampe.py", "genera_offline.py"):
+    for g in GENERATORI:
         sys.stdout.flush()
         r = subprocess.run([sys.executable, g])
         if r.returncode != 0:
-            print(f"\n  !! {g} e' fallito: {'stampa.html' if 'stampe' in g else 'prova-offline.html'} NON e' aggiornato.")
+            print(f"\n  !! {g} e' fallito: {GENERATORI[g]} NON e' aggiornato.")
             print("     dati.js si': non stampare niente finche' non lo sistemi.\n")
             return 1
 
@@ -731,7 +1123,12 @@ def main():
             print("     -", p)
         print("     push.ps1 si fermerebbe. Sistema il file.\n")
         return 1
-    print("  Nessuna chiave nei file pubblicabili.\n")
+    print("  Nessuna chiave nei file pubblicabili.")
+    if codici:
+        print("\n  Le frasi delle regole stanno nei testi propedeutici, quindi in chiaro dentro dati.js:")
+        print("  e' voluto (i giocatori le leggono scansionando), ma vuol dire che QUESTO REPOSITORY NON PUO'")
+        print("  RESTARE PUBBLICO. La sera servi l'app dalla rete di casa con  ./servi.ps1")
+    print()
     return 0
 
 

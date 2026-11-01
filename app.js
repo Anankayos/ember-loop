@@ -5,12 +5,12 @@
 'use strict';
 
 /* ---------------- COSTI — si tarano qui ----------------
-   Un numero sono minuti fissi, '1d4+1' si tira. Le app dei ruoli tirano da sole
+   Un numero sono minuti fissi, '1d6+1' si tira. Le app dei ruoli tirano da sole
    e dicono quanto e' costato; il narratore scala dalla console. */
 const COSTI = {
-  decifra: '1d4+1',   // ogni tentativo al decodificatore con i tre campi pieni, giusto o sbagliato
-  porta: '1d4+1',     // una parola sbagliata all'ingresso di un luogo dell'enigma
-  indovina: '1d4+1',  // una parola che non esiste, digitata nel registro: indovinare costa come decifrare
+  decifra: '1d6+1',   // ogni tentativo al decodificatore con i tre campi pieni, giusto o sbagliato
+  porta: '1d6+1',     // una parola sbagliata all'ingresso di un luogo dell'enigma
+  indovina: '1d6+1',  // una parola che non esiste, digitata nell'archivio: indovinare costa come decifrare
   registro: 0,        // registrare una parola vera, consultare l'archivio
   lettura: 0,         // aprire un testo dal suo sigillo
 };
@@ -47,6 +47,10 @@ if (DATI_OK) {
 }
 const UNICHE = [...VOCI.keys()];            // ordine stabile: serve al codice di stato
 const nomePianeta = id => (PIANETI.get(id) || {}).nome || id || '';
+/** Il simbolo del mondo che ha scritto una parola: dice con quale cifrario si apre.
+    Non e' un segreto — sta accanto alla parola come sta sul muro — ma i codici di quel
+    mondo si trovano solo andandoci. */
+const simboloDi = mondo => (PIANETI.get(mondo) || {}).simbolo || '?';
 /** Trova per sigillo, tollerando la scrittura: "kndl 3" e "KNDL-03" sono lo stesso. */
 function perSigillo(lista, code) {
   const forma = s => { const m = /^([A-Z]*)(\d+)$/.exec(Cifrari.normCodice(s));
@@ -54,7 +58,16 @@ function perSigillo(lista, code) {
   const q = forma(code);
   return q ? (Array.isArray(lista) ? lista : []).find(x => forma(x.id) === q) : undefined;
 }
-const trovaTesto = code => perSigillo(D.testi, code);
+/* Un reperto si apre con il suo CODICE, quattro segni, non con il numero del sigillo:
+   se bastasse il numero, chi vede HUSA-2 indovina HUSA-3 e legge un reperto che non ha
+   trovato. Il numero resta stampato perche' al Custode serve per la chiave. */
+const trovaTesto = code => {
+  const q = Cifrari.normCodice(code);
+  return q ? (D.testi || []).find(t => Cifrari.normCodice(t.codice || '') === q) : undefined;
+};
+/** Vero se quello che hanno scritto e' il numero del sigillo di un reperto che esiste:
+    serve a dirglielo invece di rispondere "non riconosciuto". */
+const eNumeroSigillo = code => !!perSigillo(D.testi, code);
 
 /* ---------------- stato locale (per dispositivo) ---------------- */
 const SK = 'emberloop.v1';
@@ -72,7 +85,7 @@ const ora = () => new Date().toTimeString().slice(0, 5);
 function tira(spec) {
   if (typeof spec === 'number') return { min: spec, come: spec + ' min' };
   const m = /^(\d+)d(\d+)([+-]\d+)?$/i.exec(String(spec).replace(/\s+/g, ''));
-  if (!m) throw new Error('COSTI: non capisco il costo «' + spec + '». Scrivi un numero di minuti oppure qualcosa come 1d4+1.');
+  if (!m) throw new Error('COSTI: non capisco il costo «' + spec + '». Scrivi un numero di minuti oppure qualcosa come 1d6+1.');
   const dadi = [];
   for (let i = 0; i < +m[1]; i++) dadi.push(1 + Math.floor(Math.random() * +m[2]));
   const b = m[3] ? parseInt(m[3], 10) : 0, tot = Math.max(0, dadi.reduce((a, x) => a + x, 0) + b);
@@ -263,8 +276,8 @@ function datiPronti() { if (DATI_OK) return true; app.append(avvisoDati()); retu
 V.ruoli = () => {
   back.classList.add('hide'); titolo('The Ember Loop', 'Terminale di rilevamento');
   const R = [
-    ['01', 'decifra', 'Il Decifratore', 'Scansiona i sigilli: i testi si aprono da soli. Le parole cifrate dentro si aprono solo in tre.'],
-    ['02', 'log', 'Il Consultatore', 'Tiene l’archivio di ciò che il tavolo apre, e i rimandi fra i testi.'],
+    ['01', 'decifra', 'Il Traduttore', 'Scansiona i sigilli: i reperti si aprono da soli. Le parole cifrate dentro si aprono solo in tre.'],
+    ['02', 'log', 'Il Custode', 'Tiene l’archivio di ciò che il tavolo apre, e i rimandi fra i reperti.'],
     ['03', 'stanze', "L'Apritore", 'Apre le porte di pietra tracciando i percorsi, e gli ingressi dei luoghi con le parole decifrate.']
   ];
   if (!DATI_OK) app.append(avvisoDati());
@@ -287,32 +300,34 @@ function corpoTesto(t, onParola) {
     if (s.t === 'c') { box.append(s.v); return; }
     const v = PAROLE.get(s.w);
     if (!v) { box.append(el('span', { class: 'cw rotta', title: 'dato incoerente: rigenera dati.js' }, s.c)); return; }
-    const chiaro = S.parole[v.hash];
+    const chiaro = S.parole[v.hash], seg = el('span', { class: 'cw-s' }, simboloDi(v.mondo));
     if (chiaro) box.append(el('span', { class: 'cw aperta', 'data-w': s.w }, chiaro));
-    else if (onParola) box.append(el('button', { class: 'cw', type: 'button', 'data-w': s.w, onclick: () => onParola(s, v) }, s.c));
-    else box.append(el('span', { class: 'cw', 'data-w': s.w }, s.c));
+    else if (onParola) box.append(el('button', { class: 'cw', type: 'button', 'data-w': s.w, onclick: () => onParola(s, v) }, seg, s.c));
+    else box.append(el('span', { class: 'cw', 'data-w': s.w }, seg, s.c));
   });
   return box;
 }
 
-/* ---- 01 · DECIFRATORE ---- */
+/* ---- 01 · TRADUTTORE ---- */
 V.decifra = () => {
-  titolo('Decifratore', 'Sigilli, testi e parole cifrate');
+  titolo('Traduttore', 'Sigilli, reperti e parole cifrate');
   if (!datiPronti()) return;
   const out = el('div'), gia = el('div');
   const errore = el('p', { class: 'err hide' });
-  const codeIn = el('input', { type: 'text', placeholder: 'KNDL-01', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false' });
+  const codeIn = el('input', { type: 'text', placeholder: 'quattro segni', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false' });
   const mostra = t => { mostraTesto(out, t); disegnaGia(); };
   const apri = code => {
     const t = trovaTesto(code);
-    if (!t) { errore.textContent = '⚠ Sigillo non riconosciuto: «' + code + '». Controlla lettere e numeri stampati sotto il sigillo.';
+    if (!t) { errore.textContent = eNumeroSigillo(code)
+        ? '⚠ «' + code + '» è il numero del sigillo, quello grande in alto: serve al Custode per la chiave, non ad aprire. Il codice del sigillo sono i quattro segni stampati sotto.'
+        : '⚠ Codice non riconosciuto: «' + code + '». Sono quattro segni stampati sotto il sigillo.';
       errore.classList.remove('hide'); return; }
     errore.classList.add('hide'); codeIn.value = '';
     visita(t.id); mostra(t);
     if (out.scrollIntoView) out.scrollIntoView({ block: 'start', behavior: 'smooth' });
   };
   const daCampo = () => { const c = codeIn.value.trim();
-    if (!c) { errore.textContent = '⚠ Scrivi il codice stampato sotto il sigillo, per esempio KNDL-01.';
+    if (!c) { errore.textContent = '⚠ Scrivi il codice stampato sotto il sigillo: quattro segni.';
       errore.classList.remove('hide'); codeIn.focus(); return; }
     apri(c); };
   codeIn.addEventListener('keydown', e => { if (e.key === 'Enter') daCampo(); });
@@ -327,7 +342,7 @@ V.decifra = () => {
   const [scanBtn, camBox] = scanner(apri);
   app.append(scanBtn, camBox,
     el('div', { class: 'card' },
-      el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Codice sigillo'), codeIn),
+      el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Codice del sigillo'), codeIn),
       el('button', { class: 'big ghost', type: 'button', style: 'margin-top:12px', onclick: daCampo }, 'Apri reperto'),
       errore,
       el('p', { class: 'hint' }, 'Se la fotocamera non parte, digita il codice stampato sotto il sigillo.')),
@@ -344,7 +359,7 @@ function mostraTesto(out, t) {
       el('h3', { class: 'tit' }, t.titolo),
       el('div', { class: 'glifi-riga', 'aria-hidden': 'true' }, glifi(t.id, 25)),
       corpoTesto(t, (s, v) => decodificatore(dec, t, s, v, disegna)));
-    if (t.cita) card.append(el('p', { class: 'cita' }, 'Questo testo ne nomina un altro.'));
+    if (t.cita) card.append(el('p', { class: 'cita' }, 'Questo reperto ne nomina un altro.'));
     if ((t.corpo || []).some(s => s.t === 'p' && PAROLE.get(s.w) && !S.parole[PAROLE.get(s.w).hash]))
       card.append(el('p', { class: 'hint' }, 'Tocca una parola cifrata per aprire il decodificatore. Servono tutti e tre.'));
   };
@@ -367,16 +382,16 @@ function decodificatore(dec, t, seg, voce, ridisegnaTesto) {
     const i = el('input', { type: 'text', name: nome, placeholder: ph, autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false' });
     return [i, el('label', { class: 'fld' }, el('span', { class: 'lbl' }, lbl + ' ', el('span', { class: 'chi' }, '· ' + chi)), i)];
   };
-  const [fA, lA] = campo('Alfabeto', 'lo porta il Decifratore', 'codice kindler', 'alfabeto');
-  const [fK, lK] = campo('Chiave', 'la trova il Consultatore', 'un numero o una parola', 'chiave');
+  const [fA, lA] = campo('Alfabeto', 'lo porta il Traduttore', 'codice kindler', 'alfabeto');
+  const [fK, lK] = campo('Chiave', 'la trova il Custode', 'un numero o una parola', 'chiave');
   const [fO, lO] = campo('Ordine', 'lo porta l’Apritore', 'codice kindler', 'ordine');
   const esito = el('div', { class: 'esito' });
   const vai = () => {
     clear(esito);
     // un campo vuoto non e' mai muto: dice cosa manca e chi lo porta
     const mancano = [];
-    if (!Cifrari.normCodice(fA.value)) mancano.push(['l’alfabeto', 'lo porta il Decifratore', fA]);
-    if (!fK.value.trim()) mancano.push(['la chiave', 'la trova il Consultatore', fK]);
+    if (!Cifrari.normCodice(fA.value)) mancano.push(['l’alfabeto', 'lo porta il Traduttore', fA]);
+    if (!fK.value.trim()) mancano.push(['la chiave', 'la trova il Custode', fK]);
     if (!Cifrari.normCodice(fO.value)) mancano.push(['l’ordine', 'lo porta l’Apritore', fO]);
     if (mancano.length) {
       esito.append(el('p', { class: 'err' }, '⚠ ' + (mancano.length === 1
@@ -387,14 +402,14 @@ function decodificatore(dec, t, seg, voce, ridisegnaTesto) {
     const chiave = Cifrari.leggiChiave(fK.value);
     if (!chiave) {
       esito.append(el('p', { class: 'err' }, '⚠ La chiave è un numero oppure una parola: «' + fK.value.trim() +
-        '» non è né l’uno né l’altra. La trova il Consultatore.'));
+        '» non è né l’uno né l’altra. La trova il Custode.'));
       fK.focus(); return;
     }
     // ogni tentativo completo costa, giusto o sbagliato
     const costo = spendi('decifra', t.id + ' · ' + seg.c);
     const ra = regola('alfabeto', fA.value), ro = regola('ordine', fO.value);
     const ignoti = [];
-    if (!ra) ignoti.push('il codice dell’alfabeto «' + fA.value.trim() + '» (lo porta il Decifratore)');
+    if (!ra) ignoti.push('il codice dell’alfabeto «' + fA.value.trim() + '» (lo porta il Traduttore)');
     if (!ro) ignoti.push('il codice dell’ordine «' + fO.value.trim() + '» (lo porta l’Apritore)');
     if (ignoti.length) {
       esito.append(el('p', { class: 'err' }, '⚠ Non corrisponde a nessuna regola kindler: ' + elencoItaliano(ignoti) +
@@ -409,8 +424,8 @@ function decodificatore(dec, t, seg, voce, ridisegnaTesto) {
       dec.append(el('div', { class: 'card acc' },
         el('div', { class: 'eyebrow', style: 'color:var(--ember)' }, 'Parola aperta'),
         el('div', { class: 'aperta-big mono' }, uscita),
-        el('p', { style: 'margin:6px 0 0' }, 'Si apre in tutti i testi di questo telefono ed entra nel registro.'),
-        r.log.length ? el('p', { style: 'margin:6px 0 0' }, '▸ Apre una voce del registro: ditela al Consultatore.') : '',
+        el('p', { style: 'margin:6px 0 0' }, 'Si apre in tutti i reperti di questo telefono ed entra nell’archivio.'),
+        r.log.length ? el('p', { style: 'margin:6px 0 0' }, '▸ Apre una voce del registro: ditela al Custode.') : '',
         r.enigmi.length ? el('p', { class: 'ok' }, '▸ Questa apre un luogo. Ditelo all’Apritore.') : '',
         el('p', { class: 'costo' }, rigaCosto(costo))));
     } else {
@@ -427,47 +442,112 @@ function decodificatore(dec, t, seg, voce, ridisegnaTesto) {
   }));
   dec.append(el('div', { class: 'card dec' },
     el('div', { class: 'eyebrow', style: 'color:var(--warm)' }, 'Decodificatore · ' + t.id),
-    el('div', { class: 'cw-big mono' }, seg.c),
+    el('div', { class: 'cw-big mono' }, el('span', { class: 'cw-s grande' }, simboloDi(voce.mondo)), seg.c),
+    el('p', { class: 'hint', style: 'margin:0 0 12px' },
+      'Questa parola l’ha scritta ' + simboloDi(voce.mondo) + ': servono l’alfabeto e l’ordine di quel mondo, e la chiave si trova come si fa lì.'),
     lA, lK, lO,
     el('button', { class: 'big', type: 'button', style: 'margin-top:12px', onclick: vai }, 'Decifra · ' + etichettaCosto(COSTI.decifra)),
     esito));
   if (dec.scrollIntoView) dec.scrollIntoView({ block: 'nearest' });
 }
 
-/* ---- 02 · CONSULTATORE — archivio e rimandi ---- */
+/* ---- 02 · CUSTODE — archivio e rimandi ---- */
+/** Lo strumento del Custode: la chiave di un mondo, con la calcolatrice.
+    Si apre SOLO dopo che questo telefono ha scansionato il reperto di quel mondo che
+    spiega la chiave. E' il mestiere del Custode, ma resta una cosa da scoprire:
+    se l'app lo dicesse da sola, i reperti propedeutici non servirebbero a niente. */
+function pannelloChiavi() {
+  const box = el('div', { class: 'card' },
+    el('div', { class: 'eyebrow' }, 'Le chiavi'));
+  const mondi = (D.pianeti || []).filter(p => Cifrari.CIFRARI[p.id]);
+  // quali chiavi ha imparato questo telefono: il reperto che le spiega l'ha visitato
+  const saputa = p => (S.testi || []).some(id => {
+    const t = TESTI.get(id);
+    return t && t.pianeta === p.id && (t.rivela || []).includes('chiave');
+  });
+  const campo = (lbl, modo) => {
+    const i = el('input', { type: 'text', inputmode: modo === 'n' ? 'numeric' : 'text',
+      autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false' });
+    return [i, el('label', { class: 'fld' }, el('span', { class: 'lbl' }, lbl), i)];
+  };
+  let aperte = 0;
+  mondi.forEach(p => {
+    const riga = el('div', { class: 'cif-m' },
+      el('div', { class: 'cif-h' }, el('span', { class: 'cif-s' }, p.simbolo || '?'), p.nome));
+    if (!saputa(p)) {
+      riga.append(el('p', { class: 'hint', style: 'margin:2px 0 0' },
+        'Non ancora. Il reperto di ' + p.nome + ' che spiega come si trova la chiave è là fuori: ' +
+        'quando il tavolo lo scansiona e tu lo registri, qui compare la regola e il conto si fa da solo.'));
+      box.append(riga); return;
+    }
+    aperte++;
+    const c = Cifrari.CIFRARI[p.id];
+    riga.append(el('p', { class: 'cif-v', style: 'margin:2px 0 10px' }, (c.dice || {}).chiave || ''));
+    const esito = el('div', { class: 'chiave-out mono' }, '—');
+    let leggi;
+    if (p.id === 'IRIS') {
+      const [f, l] = campo('La prima parola in chiaro del reperto', 't');
+      riga.append(l);
+      leggi = () => { const k = Cifrari.leggiChiave(f.value);
+        return k && k.tipo === 'parola' ? k.k.join('-') : null; };
+      f.addEventListener('input', () => esito.textContent = leggi() || '—');
+    } else {
+      const somma = p.id === 'HUSA';
+      const [a, la] = campo('Numero del sigillo', 'n');
+      const [b, lb] = campo(somma ? 'Quante lettere ha la parola cifrata' : 'Che posto occupa la parola nel reperto', 'n');
+      riga.append(el('div', { class: 'grid2' }, la, lb));
+      leggi = () => { const x = parseInt(a.value, 10), y = parseInt(b.value, 10);
+        if (!(x > 0) || !(y > 0)) return null;
+        return String(somma ? x + y : x * y); };
+      [a, b].forEach(i => i.addEventListener('input', () => esito.textContent = leggi() || '—'));
+    }
+    riga.append(esito);
+    box.append(riga);
+  });
+  box.append(el('p', { class: 'hint', style: 'margin:12px 0 0' }, aperte
+    ? 'Il numero che esce qui lo detti al Traduttore: lo scrive nel campo Chiave del decodificatore.'
+    : 'Qui non c’è ancora niente: le regole delle chiavi si trovano nei reperti, uno per mondo.'));
+  return box;
+}
+
 V.log = () => {
-  titolo('Consultatore', 'Archivio e rimandi');
+  titolo('Custode', 'Archivio e rimandi');
   if (!datiPronti()) return;
   let aperto = null;                                   // la voce dell'archivio aperta
   const lista = el('div'), conta = el('div', { class: 'eyebrow', style: 'margin:18px 0 10px' });
-  const fb = el('p', { class: 'hint' }, 'Un sigillo mette un testo nell’archivio. Una parola te la dice il Decifratore quando l’ha aperta: registrarla è gratis, una parola che non esiste costa ' + etichettaCosto(COSTI.indovina) + '.');
+  const fb = el('p', { class: 'hint' }, 'Un sigillo mette un reperto nell’archivio. Una parola te la dice il Traduttore quando l’ha aperta: registrarla è gratis, una parola che non esiste costa ' + etichettaCosto(COSTI.indovina) + '.');
   const dice = (cls, testo) => { fb.className = cls; fb.textContent = testo; };
-  const inp = el('input', { type: 'text', placeholder: 'KNDL-01 oppure una parola', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false' });
+  const inp = el('input', { type: 'text', placeholder: 'codice del sigillo oppure una parola', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false' });
   const cerca = el('input', { type: 'text', placeholder: 'parola, sigillo, titolo, LOG…', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false' });
   const numero = pred => S.archivio.findIndex(pred) + 1;
 
   const registra = raw => {
     const v = String(raw || '').trim();
-    if (!v) { dice('err', '⚠ Scrivi un sigillo (per esempio KNDL-01) oppure una parola che il Decifratore ha aperto.'); inp.focus(); return; }
+    if (!v) { dice('err', '⚠ Scrivi il codice di un sigillo (quattro segni) oppure una parola che il Traduttore ha aperto.'); inp.focus(); return; }
     const t = trovaTesto(v);
     if (t) {
       const nuovo = visita(t.id); aperto = 't:' + t.id; inp.value = '';
+      // il reperto appena registrato puo' essere quello che spiega una chiave
+      if (nuovo && (t.rivela || []).includes('chiave')) { go('log'); return; }
       dice('ok', (nuovo ? '✓ Nell’archivio come #' + numero(a => a.k === 't' && a.id === t.id) + ': ' : 'Era già nell’archivio: ') + t.titolo);
       disegna(); return;
     }
+    if (eNumeroSigillo(v)) {
+      dice('hint', '«' + v + '» è il numero del sigillo, non il codice. Il codice del sigillo sono i quattro segni stampati sotto.'); return;
+    }
     if (perSigillo(D.log, v) || /^LOG\W*\d+$/i.test(v)) {
-      dice('hint', 'Le voci del registro non si scansionano: si aprono con la parola che le apre. Chiedetela al Decifratore.'); return;
+      dice('hint', 'Le voci del registro non si scansionano: si aprono con la parola che le apre. Chiedetela al Traduttore.'); return;
     }
     const w = Cifrari.normParola(v);
     if (!w) { dice('err', '⚠ «' + v + '» non è né un sigillo né una parola.'); return; }
     const h = Cifrari.impronta(w);
     if (VOCI.has(h)) {
       const r = apriParola(h, w); aperto = 'p:' + h; inp.value = '';
-      dice('ok', r.nuova ? '✓ «' + w + '» entra nel registro come #' + numero(a => a.k === 'p' && a.h === h) + '.' : '«' + w + '» era già nel registro.');
+      dice('ok', r.nuova ? '✓ «' + w + '» entra nell’archivio come #' + numero(a => a.k === 'p' && a.h === h) + '.' : '«' + w + '» era già nell’archivio.');
       disegna(); return;
     }
     const costo = spendi('indovina', '«' + w + '» a vuoto');
-    dice('err', '⚠ «' + w + '» non è una parola dell’archivio. ' + rigaCosto(costo));
+    dice('err', '⚠ «' + w + '» non è una parola dei reperti. ' + rigaCosto(costo));
   };
 
   const testaVoce = (a, tipo, nome, sotto) => el('button', { class: 'arch-h', type: 'button', 'aria-expanded': String(aperto === a.chiave),
@@ -476,18 +556,19 @@ V.log = () => {
     el('span', { class: 'arch-t' }, el('span', { class: 'meta' }, tipo + (sotto ? ' · ' + sotto : '') + ' · ' + a.q), el('b', {}, nome)));
 
   const voceTesto = (a, t) => {
-    const it = el('div', { class: 'item arch' }, testaVoce(a, 'Testo', t.id + ' · ' + t.titolo, nomePianeta(t.pianeta)));
+    const it = el('div', { class: 'item arch' }, testaVoce(a, 'Reperto', t.id + ' · ' + t.titolo, nomePianeta(t.pianeta)));
     if (aperto === a.chiave) {
       it.append(corpoTesto(t, null));
-      if (t.cita) it.append(el('p', { class: 'cita' }, 'Questo testo ne nomina un altro.'));
+      if (t.cita) it.append(el('p', { class: 'cita' }, 'Questo reperto ne nomina un altro.'));
       if ((t.corpo || []).some(s => s.t === 'p' && PAROLE.get(s.w) && !S.parole[PAROLE.get(s.w).hash]))
-        it.append(el('p', { class: 'hint' }, 'Le parole cifrate si aprono dal Decifratore, in tre.'));
+        it.append(el('p', { class: 'hint' }, 'Le parole cifrate si aprono dal Traduttore, in tre.'));
     }
     return it;
   };
   const voceParola = (a, w) => {
     const voci = VOCI.get(a.h) || [];
-    const it = el('div', { class: 'item arch' }, testaVoce(a, 'Parola', w, voci.map(v => nomePianeta(v.pianeta)).join(', ')));
+    const it = el('div', { class: 'item arch' },
+      testaVoce(a, 'Parola', w, (voci.length ? simboloDi(voci[0].mondo) + ' · ' : '') + voci.map(v => nomePianeta(v.pianeta)).join(', ')));
     if (aperto !== a.chiave) return it;
     // una voce per pianeta, in ordine: il senso cambia scendendo indietro nel tempo
     voci.forEach(v => {
@@ -498,7 +579,7 @@ V.log = () => {
         el('h4', {}, L.titolo), el('div', { class: 'body' }, L.corpo)));
       const E = v.apre_enigma && ENIGMI.get(v.apre_enigma);
       if (E) box.append(el('div', { class: 'clue' }, '▸ Apre un luogo: ' + E.nome + '. Ditelo all’Apritore.'));
-      if (!v.nota && !L && !E) box.append(el('div', { class: 'body' }, 'Nessuna nota per questo pianeta.'));
+      if (!v.nota && !L && !E) box.append(el('div', { class: 'body' }, 'Nessuna nota per questo mondo.'));
       it.append(box);
     });
     // i rimandi: ogni testo che la contiene, visitato o no (di quelli non visitati, solo titolo e sigillo)
@@ -535,7 +616,7 @@ V.log = () => {
       else if (a.k === 'p' && S.parole[a.h]) { lista.append(voceParola(a, S.parole[a.h])); mostrate++; }
     });
     conta.textContent = S.testi.length + ' testi · ' + Object.keys(S.parole).length + ' parole' + (q ? ' · ' + mostrate + ' trovate' : '');
-    if (!S.archivio.length) lista.append(el('p', { class: 'hint' }, 'L’archivio è vuoto. Scansiona un sigillo, o registra una parola che il Decifratore ha aperto.'));
+    if (!S.archivio.length) lista.append(el('p', { class: 'hint' }, 'L’archivio è vuoto. Scansiona un sigillo, o registra una parola che il Traduttore ha aperto.'));
     else if (q && !mostrate) lista.append(el('p', { class: 'hint' }, 'Niente nell’archivio per «' + cerca.value.trim() + '».'));
   }
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') registra(inp.value); });
@@ -548,6 +629,7 @@ V.log = () => {
       el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Sigillo o parola'), inp),
       el('button', { class: 'big log-go', type: 'button', style: 'margin-top:12px', onclick: () => registra(inp.value) }, 'Registra'),
       fb),
+    pannelloChiavi(),
     el('label', { class: 'fld', style: 'margin-top:18px' }, el('span', { class: 'lbl' }, 'Cerca nell’archivio'), cerca),
     conta, lista, piede());
   disegna();
@@ -595,7 +677,7 @@ function ingresso(E) {
     const fb = el('p', { class: 'hint' }, '');
     const prova = () => {
       const w = Cifrari.normParola(inp.value);
-      if (!w) { fb.className = 'err'; fb.textContent = '⚠ Scrivi la parola decifrata: la legge il Decifratore dal suo testo.'; inp.focus(); return; }
+      if (!w) { fb.className = 'err'; fb.textContent = '⚠ Scrivi la parola decifrata: la legge il Traduttore dal suo reperto.'; inp.focus(); return; }
       if (Cifrari.impronta(w) === E.parola_hash) {
         S.enigmi.push(E.id); save();
         if (VOCI.has(E.parola_hash)) apriParola(E.parola_hash, w);
@@ -871,12 +953,172 @@ function porta(st) {
 }
 
 /* ---- MASTER · console di sistema ----
-   I 30 minuti sono un BUDGET, non un cronometro: ogni azione costa 1d4+1. */
+   I 30 minuti sono un BUDGET, non un cronometro: ogni azione costa 1d6+1. */
 /* Le tre regole si leggono dai dati, non si scrivono qui: se cambiano in
    contenuti.md la console si aggiorna da sola invece di mentire. */
 const REGOLE = () => (D.pianeti || [])
   .filter(p => p.id !== 'FIN' && p.meccanica)
   .map(p => p.meccanica);
+
+/** I tre cifrari in sintesi, solo sulla console: serve al narratore per spiegare una
+    regola o sbloccare il tavolo senza andare a cercare il foglio. Le descrizioni stanno
+    in cifrari.js accanto alle regole stesse, cosi' non possono divergere.
+    NON ci sono le frasi che i giocatori digitano: quelle si trovano scansionando i
+    reperti propedeutici, ed e' il punto del gioco. Stanno sul foglio chiavi stampato. */
+function pannelloCifrari() {
+  const parti = [['alfabeto', 'Alfabeto', 'Traduttore'], ['ordine', 'Ordine', 'Apritore'],
+                 ['chiave', 'Chiave', 'Custode']];
+  const box = el('div', { class: 'card cold' },
+    el('div', { class: 'eyebrow', style: 'color:var(--cold)' }, 'I tre cifrari, in breve'));
+  const mondi = (D.pianeti || []).filter(p => Cifrari.CIFRARI[p.id]);
+  if (!mondi.length) {
+    box.append(el('p', { class: 'hint', style: 'margin:8px 0 0' },
+      'Nei dati non c’è nessun mondo con un cifrario.'));
+    return box;
+  }
+  mondi.forEach(p => {
+    const c = Cifrari.CIFRARI[p.id], righe = el('div', { class: 'cif' });
+    // l'esempio e' su parole inventate: si puo' mostrare senza regalare niente
+    const esempio = x => x ? el('div', { class: 'cif-e' },
+      el('span', { class: 'mono' }, x.da), ' → ', el('b', { class: 'mono' }, x.a),
+      x.nota ? el('span', { class: 'cif-n' }, ' · ' + x.nota) : '') : '';
+    parti.forEach(([k, lbl, chi]) => righe.append(
+      el('div', { class: 'cif-r' },
+        el('div', { class: 'cif-k' }, lbl, el('span', {}, ' · ' + chi)),
+        el('div', { class: 'cif-v' }, (c.dice || {})[k] || '—', esempio((c.esempi || {})[k])))));
+    box.append(el('div', { class: 'cif-m' },
+      el('div', { class: 'cif-h' }, el('span', { class: 'cif-s' }, p.simbolo || '?'), p.nome),
+      righe, esempio((c.esempi || {}).insieme)));
+  });
+  box.append(el('p', { class: 'hint', style: 'margin:12px 0 0' },
+    'Le due frasi che i giocatori digitano non sono qui: le trovano scansionando i reperti ' +
+    'propedeutici. Se ti servono, sono sul foglio chiavi stampato.'));
+  return box;
+}
+
+/* ---------------- tutti i reperti, sulla sola console ----------------
+   Niente si stampa: il reperto si mostra da qui. Il narratore lo legge con le note
+   sotto; poi tocca «Mostra ai giocatori» e gira lo schermo: a quel punto si vede il
+   reperto com'e' scritto davvero, in simboli, con il suo QR. Loro lo scansionano dal
+   tuo schermo e sul loro telefono si apre leggibile - tranne le parole cifrate.
+   Le parole in chiaro qui non ci sono e non ci devono essere: dati.js sta anche sui
+   loro telefoni. Quelle stanno sul foglio chiavi e in master.html. */
+const trascrivi = t => {
+  const m = D.simboli || {};
+  let s = '';
+  for (const c of String(t)) {
+    const b = c.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    s += (b.length === 1 && m[b]) ? m[b] : c;
+  }
+  return s;
+};
+
+/** Il QR disegnato dalla matrice impacchettata: una rect per ogni tratto orizzontale. */
+function disegnaQR(dati) {
+  const p = String(dati || '').split(':'), n = parseInt(p[0], 10);
+  if (!n || !p[1]) return null;
+  const b = atob(p[1]), q = [];
+  for (let i = 0; i < b.length; i++) { const v = b.charCodeAt(i);
+    for (let k = 7; k >= 0; k--) q.push((v >> k) & 1); }
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + n + ' ' + n);
+  svg.setAttribute('fill', '#000');
+  for (let y = 0; y < n; y++) {
+    let x = 0;
+    while (x < n) {
+      if (!q[y * n + x]) { x++; continue; }
+      const x0 = x;
+      while (x < n && q[y * n + x]) x++;
+      const r = document.createElementNS(NS, 'rect');
+      r.setAttribute('x', x0); r.setAttribute('y', y);
+      r.setAttribute('width', x - x0); r.setAttribute('height', 1);
+      svg.appendChild(r);
+    }
+  }
+  return svg;
+}
+
+/** Il reperto come lo vede il tavolo: tutto in simboli, le parole cifrate nel loro
+    riquadro col simbolo del mondo che le ha scritte. */
+function corpoInSimboli(t) {
+  const box = el('div', { class: 'rep-sim' });
+  (t.corpo || []).forEach(z => {
+    if (z.t === 'c') { box.append(trascrivi(z.v)); return; }
+    const v = PAROLE.get(z.w);
+    box.append(el('b', { class: 'rep-w' }, simboloDi(v && v.mondo), trascrivi(z.c)));
+  });
+  return box;
+}
+
+function pannelloReperti() {
+  const box = el('div', { class: 'card' }, el('div', { class: 'eyebrow' }, 'Tutti i reperti'));
+  const cerca = el('input', { type: 'text', placeholder: 'sigillo, titolo, codice…', autocapitalize: 'none', autocomplete: 'off', spellcheck: 'false' });
+  const lista = el('div', { class: 'rep-l' });
+  const scena = el('div', { class: 'rep-scena hide' });
+
+  const mostraAiGiocatori = t => {
+    clear(scena);
+    const qr = disegnaQR((D.qr || {})[t.id]);
+    scena.append(
+      el('button', { class: 'rep-x', type: 'button', onclick: () => scena.classList.add('hide') }, 'chiudi'),
+      el('div', { class: 'rep-in' },
+        corpoInSimboli(t),
+        el('div', { class: 'rep-qr' }, qr || el('p', { class: 'err' }, 'QR non disponibile: manca il modulo qrcode in costruzione.')),
+        el('div', { class: 'rep-cod mono' }, t.codice)));
+    scena.classList.remove('hide');
+    scena.scrollTop = 0;
+  };
+
+  const apri = t => {
+    clear(dettaglio);
+    const parole = (t.corpo || []).filter(z => z.t === 'p');
+    const note = el('div', { class: 'rep-note' },
+      el('div', { class: 'eyebrow' }, 'Note'),
+      el('p', { class: 'hint', style: 'margin:6px 0 0' },
+        nomePianeta(t.pianeta) + ' · numero del sigillo ' + (String(t.id).match(/(\d+)$/) || [, '—'])[1] +
+        ' · codice ' + t.codice + ' · ' + t.tipo +
+        (t.rivela && t.rivela.length ? ' · rivela ' + t.rivela.join(', ') : '')));
+    if (parole.length) {
+      const tab = el('div', { class: 'rep-t' });
+      parole.forEach(z => { const v = PAROLE.get(z.w);
+        tab.append(el('div', { class: 'rep-r' },
+          el('span', { class: 'rep-s' }, simboloDi(v && v.mondo)),
+          el('span', { class: 'mono' }, z.c),
+          el('span', { class: 'rep-k mono' }, z.k || '—'),
+          el('span', { class: 'rep-c' }, z.come || '')));
+      });
+      note.append(tab, el('p', { class: 'hint', style: 'margin:8px 0 0' },
+        'La parola in chiaro non è qui, di proposito: questi dati stanno anche sui telefoni dei giocatori. È sul foglio chiavi.'));
+    } else {
+      note.append(el('p', { class: 'hint', style: 'margin:6px 0 0' }, 'Nessuna parola cifrata: si legge e basta.'));
+    }
+    dettaglio.append(
+      el('div', { class: 'eyebrow', style: 'margin-top:4px' }, t.id + ' · ' + t.titolo),
+      el('div', { class: 'rep-chiaro' }, ...(t.corpo || []).map(z => z.t === 'c'
+        ? z.v : el('b', { class: 'rep-w' }, simboloDi((PAROLE.get(z.w) || {}).mondo), z.c))),
+      el('button', { class: 'big', type: 'button', style: 'margin-top:12px', onclick: () => mostraAiGiocatori(t) },
+        'Mostra ai giocatori'),
+      note);
+    if (dettaglio.scrollIntoView) dettaglio.scrollIntoView({ block: 'nearest' });
+  };
+
+  const dettaglio = el('div');
+  const disegna = () => {
+    clear(lista);
+    const q = cerca.value.trim().toLowerCase();
+    const suoi = (D.testi || []).filter(t => !q ||
+      (t.id + ' ' + t.titolo + ' ' + t.codice + ' ' + nomePianeta(t.pianeta)).toLowerCase().includes(q));
+    if (!suoi.length) { lista.append(el('p', { class: 'hint' }, 'Nessun reperto per «' + cerca.value.trim() + '».')); return; }
+    suoi.forEach(t => lista.append(el('button', { class: 'rep-b', type: 'button', onclick: () => apri(t) },
+      el('b', { class: 'mono' }, t.codice), el('s', {}, t.id + ' · ' + t.titolo))));
+  };
+  cerca.addEventListener('input', disegna);
+  disegna();
+  box.append(el('label', { class: 'fld', style: 'margin-top:10px' }, el('span', { class: 'lbl' }, 'Cerca'), cerca),
+    lista, dettaglio, scena);
+  return box;
+}
 
 /** Parole aperte: quali parole ha gia' il tavolo, perche' il narratore possa fare da
     rete di sicurezza. Mostra questo dispositivo, e un telefono dei giocatori se il
@@ -900,8 +1142,8 @@ function pannelloParole() {
         if (v.apre_enigma) apre.push('luogo: ' + ((ENIGMI.get(v.apre_enigma) || {}).nome || v.apre_enigma)); });
       const chiaro = S.parole[h], tel = dalCodice && dalCodice.has(h);
       lista.append(el('div', { class: 'pa-r' + (chiaro || tel ? ' on' : '') },
-        el('span', { class: 'pa-id mono' }, voci.map(v => v.id).join(' · ')),
-        el('span', { class: 'pa-dove' }, (chiaro ? '«' + chiaro + '» · ' : '') + (dove.join(', ') || 'in nessun testo') + (apre.length ? ' → ' + apre.join(', ') : '')),
+        el('span', { class: 'pa-id mono' }, simboloDi(voci[0].mondo) + ' ' + voci.map(v => v.id).join(' · ')),
+        el('span', { class: 'pa-dove' }, (chiaro ? '«' + chiaro + '» · ' : '') + (dove.join(', ') || 'in nessun reperto') + (apre.length ? ' → ' + apre.join(', ') : '')),
         el('span', { class: 'pa-st mono' }, chiaro && tel ? 'qui+tel' : chiaro ? 'qui' : tel ? 'tel' : '—')));
     });
   };
@@ -945,10 +1187,10 @@ V.master = () => {
     salvaM();
   };
   const scala = etichetta => {
-    const d = 1 + Math.floor(Math.random() * 4), costo = d + 1;
+    const d = 1 + Math.floor(Math.random() * 6), costo = d + 1;
     M.storia.push(costo);
     M.min = Math.max(0, M.min - costo);
-    roll.textContent = etichetta + ' → 1d4+1 = ' + d + '+1 = ' + costo + ' min';
+    roll.textContent = etichetta + ' → 1d6+1 = ' + d + '+1 = ' + costo + ' min';
     if (M.min === 0) roll.textContent += '  ·  LUCE BIANCA';
     dipingi();
   };
@@ -959,7 +1201,7 @@ V.master = () => {
   app.append(el('div', { class: 'card' }, clock, sotto, roll,
       el('div', { class: 'grid2', style: 'margin-top:14px' },
         B('Spostamento', 'Spostamento'), B('Traduzione', 'Traduzione'),
-        B('Registro', 'Consultazione'), B('Enigma', 'Enigma')),
+        B('Archivio', 'Consultazione'), B('Enigma', 'Enigma')),
       el('div', { class: 'grid2', style: 'margin-top:10px' },
         el('button', { class: 'big ghost', type: 'button', onclick: () => {
             const u = M.storia.pop(); if (u) { M.min = Math.min(30, M.min + u); roll.textContent = 'annullato −' + u + ' min'; dipingi(); } } }, 'Annulla'),
@@ -968,6 +1210,8 @@ V.master = () => {
             roll.textContent = 'Nuovo loop. Il mondo torna indietro.'; dipingi(); } }, 'Nuovo loop'))),
     el('div', { class: 'card cold' },
       el('div', { class: 'eyebrow', style: 'color:var(--cold)' }, 'Stato dei rilevatori su questo dispositivo'), stato),
+    pannelloCifrari(),
+    pannelloReperti(),
     pannelloParole(),
     el('div', { class: 'card' },
       el('div', { class: 'eyebrow' }, 'Costo riportato da un giocatore'),

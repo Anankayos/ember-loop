@@ -38,16 +38,54 @@ def sigillo(codice, px=104):
 
 P = {p['id']: p for p in d['pianeti']}
 nome = lambda pid: (P.get(pid) or {}).get('nome', pid)
+# il numero del sigillo: su Husa e Polis la chiave si calcola a partire da qui
+numero = lambda sid: (re.search(r'(\d+)$', sid).group(1) if re.search(r'(\d+)$', sid) else '—')
 pag = []
+
+import simboli as SIM
+
+_guai = SIM.controlla()
+if _guai:
+    raise SystemExit("  l'alfabeto di simboli non va: " + "; ".join(_guai))
+
+# il simbolo del mondo che ha scritto ogni parola: accanto alla forma cifrata dice
+# quale cifrario la apre, ed e' l'unico segno della pagina che NON e' una lettera
+SIMBOLO_PIANETA = {x['id']: x.get('simbolo', '?') for x in d['pianeti']}
+MONDO_PAROLA = {w['id']: w['mondo'] for w in d['parole']}
+
+
+def corpo_in_simboli(t):
+    """Il reperto come sta sul muro: tutto trascritto, e le parole cifrate marcate dal
+       simbolo del loro mondo. L'app ne restituisce la meta' leggibile; l'altra meta'
+       resta chiusa anche dopo, ed e' quella che i tre aprono insieme."""
+    fuori = []
+    for z in t['corpo']:
+        if z['t'] == 'c':
+            fuori.append(e(SIM.trascrivi(z['v'])))
+        else:
+            segno = SIMBOLO_PIANETA.get(MONDO_PAROLA.get(z['w'], ''), '?')
+            fuori.append('<b class="sgl">%s%s</b>' % (e(segno), e(SIM.trascrivi(z['c']))))
+    return ''.join(fuori)
+
+
+def misura(t):
+    """Quanto grande scrivere: un reperto lungo deve stare in una pagina lo stesso."""
+    n = sum(len(z['v']) if z['t'] == 'c' else len(z['c']) + 1 for z in t['corpo'])
+    return '13pt' if n <= 600 else '11pt' if n <= 1000 else '9.5pt' if n <= 1500 else '8pt'
+
 
 # --- un foglio per testo: il sigillo da scansionare, il testo si apre da solo nell'app ---
 for t in d['testi']:
     pag.append(f'''<section class="foglio">
-  <div class="hd"><div class="eb">Archivio Kindler &middot; reperto</div>
-    <h2>{e(t['titolo'])}</h2><div class="sub">{e(nome(t['pianeta']))}</div></div>
-  <div class="mid">{sigillo(t['id'])}</div>
-  <div class="gly" data-seme="{e(t['id'])}" data-n="260"></div>
-  <div class="ft">Il Decifratore inquadra il sigillo, oppure digita <b>{e(t['id'])}</b>: il testo si apre da solo.</div>
+  <div class="hd">
+    <div><div class="eb">Archivio Kindler &middot; reperto</div>
+      <h2>{e(t['titolo'])}</h2><div class="sub">{e(nome(t['pianeta']))}</div></div>
+    <div class="num"><span>sigillo n.</span><b>{e(numero(t['id']))}</b></div></div>
+  <div class="gly" style="font-size:{misura(t)}">{corpo_in_simboli(t)}</div>
+  <div class="mid">{sigillo(t['codice'])}</div>
+  <div class="ft">Il Traduttore inquadra il sigillo, oppure digita il codice del sigillo <b class="cod">{e(t['codice'])}</b>:
+    il terminale rende leggibile il reperto. Le parole segnate restano chiuse: quelle si aprono in tre.
+    <br><span class="nb">Il numero del sigillo, in alto, non apre niente: serve al Custode per la chiave.</span></div>
 </section>''')
 
 # --- carte-porta, per il narratore ---
@@ -59,9 +97,6 @@ if d['stanze']:
                f'<h2>Carte-porta</h2><div class="sub">consegnale quando il telefono dell\'Apritore mostra la porta aperta</div></div>'
                f'<div class="griglia">{st}</div></section>')
 
-GLYPH_JS = open('app.js', encoding='utf-8').read()
-GLYPH_JS = GLYPH_JS[GLYPH_JS.index("const GL ="):GLYPH_JS.index("/* ---------------- scanner")]
-
 pagina = f'''<!doctype html><html lang="it"><head><meta charset="utf-8">
 <title>The Ember Loop — materiali da stampare</title>
 <style>
@@ -69,7 +104,15 @@ pagina = f'''<!doctype html><html lang="it"><head><meta charset="utf-8">
 body {{ margin:0; background:#8a8f96; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#111; }}
 .foglio {{ background:#fff; width:210mm; min-height:297mm; margin:0 auto 10mm; padding:20mm 18mm; box-sizing:border-box;
   page-break-after:always; display:flex; flex-direction:column; }}
-.hd {{ border-bottom:1px solid #111; padding-bottom:10px; margin-bottom:26px; }}
+.hd {{ border-bottom:1px solid #111; padding-bottom:10px; margin-bottom:26px;
+  display:flex; align-items:flex-end; justify-content:space-between; gap:12mm; }}
+/* Il numero del sigillo non e' decorazione: su due mondi su tre e' dentro la chiave.
+   Va letto a colpo d'occhio da chi ha il foglio in mano. */
+.num {{ text-align:right; flex:0 0 auto; }}
+.num b {{ font-family:ui-monospace,Menlo,monospace; font-size:34pt; font-weight:600;
+  line-height:.9; display:block; letter-spacing:-.02em; }}
+.num span {{ font-family:ui-monospace,Menlo,monospace; font-size:8.5pt; letter-spacing:.18em;
+  text-transform:uppercase; color:#666; }}
 .eb {{ font-family:ui-monospace,Menlo,monospace; font-size:9.5pt; letter-spacing:.18em; text-transform:uppercase; color:#666; }}
 h2 {{ margin:6px 0 2px; font-size:23pt; font-weight:600; letter-spacing:-.01em; }}
 .sub {{ font-style:italic; color:#555; font-size:11pt; }}
@@ -78,9 +121,16 @@ h2 {{ margin:6px 0 2px; font-size:23pt; font-weight:600; letter-spacing:-.01em; 
 .sig .ring {{ position:absolute; inset:0; }}
 .sig .qr {{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }}
 .cod {{ font-family:ui-monospace,Menlo,monospace; font-size:12pt; letter-spacing:.28em; margin-top:6px; }}
-.gly {{ font-family:ui-monospace,Menlo,monospace; font-size:14pt; line-height:1.85; letter-spacing:.2em;
-  color:#333; word-break:break-all; text-align:justify; flex:1; border-top:1px solid #ddd; padding-top:8mm; }}
+/* il reperto, trascritto nell'alfabeto kindler: a capo e punteggiatura restano,
+   perche' e' quello che lo fa sembrare un documento invece che rumore */
+.gly {{ font-family:ui-monospace,Menlo,monospace; line-height:2; letter-spacing:.18em;
+  color:#222; white-space:pre-wrap; text-align:left; flex:1;
+  border-top:1px solid #ddd; padding-top:7mm; }}
+.gly .sgl {{ font-weight:400; padding:1px 4px; border:1px solid #999; border-radius:4px;
+  white-space:nowrap; letter-spacing:.12em; }}
 .ft {{ border-top:1px solid #111; margin-top:8mm; padding-top:6px; font-size:9.5pt; color:#444; }}
+.ft .cod {{ font-family:ui-monospace,Menlo,monospace; font-size:13pt; letter-spacing:.22em; }}
+.nb {{ color:#777; font-size:8.5pt; }}
 .griglia {{ display:grid; grid-template-columns:1fr 1fr; gap:8mm; }}
 .carta {{ border:1.5px solid #111; border-radius:3px; padding:7mm; text-align:center; min-height:62mm;
   display:flex; flex-direction:column; align-items:center; justify-content:center; page-break-inside:avoid; }}
@@ -90,12 +140,7 @@ h2 {{ margin:6px 0 2px; font-size:23pt; font-weight:600; letter-spacing:-.01em; 
 @media print {{ body {{ background:#fff; }} .foglio {{ margin:0; box-shadow:none; }} }}
 </style></head><body>
 {"".join(pag)}
-<script>
-{GLYPH_JS}
-document.querySelectorAll('.gly').forEach(function(n){{
-  n.textContent = glifi(n.dataset.seme, parseInt(n.dataset.n,10));
-}});
-</script>
+
 </body></html>'''
 open('stampa.html', 'w', encoding='utf-8', newline='\n').write(pagina)
 print("stampa.html generato ·", len(d['testi']), "fogli-sigillo +", len(d['stanze']), "carte-porta")

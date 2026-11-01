@@ -102,7 +102,7 @@ label.fld .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color
 .item .body{white-space:pre-wrap;color:var(--dim);font-size:14px;margin-top:8px}
 .item .clue{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);color:var(--cold);font-size:13.5px}
 
-/* ---------- testi e parole cifrate ---------- */
+/* ---------- reperti e parole cifrate ---------- */
 .tit{margin:6px 0 10px;font-size:19px}
 .glifi-riga{font-family:var(--mono);font-size:12px;letter-spacing:.3em;color:var(--faint);opacity:.6;
   white-space:nowrap;overflow:hidden;margin:0 0 12px}
@@ -111,6 +111,8 @@ label.fld .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color
   line-height:1.9;cursor:pointer;font-weight:600;-webkit-appearance:none;appearance:none}
 button.cw:hover,button.cw:focus-visible{border-color:var(--warm);outline:none}
 span.cw{cursor:default}
+.cw-s{opacity:.8;margin-right:4px;font-size:.9em;color:var(--dim)}
+.cw-s.grande{font-size:.7em;margin-right:10px;vertical-align:middle}
 .cw.aperta{color:var(--ink);background:none;border:0;padding:0 1px;text-decoration:underline;
   text-decoration-color:var(--ember);text-decoration-thickness:2px;text-underline-offset:3px}
 .cw.rotta{color:var(--bad);border-color:var(--bad)}
@@ -132,7 +134,7 @@ span.cw{cursor:default}
   padding-top:10px;border-top:1px dashed var(--line)}
 .piede .mono{color:var(--dim);letter-spacing:.16em;white-space:nowrap}
 
-/* ---------- archivio del Consultatore ---------- */
+/* ---------- archivio del Custode ---------- */
 .arch{padding:0}
 .arch-h{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;
   color:inherit;font:inherit;padding:12px 14px;cursor:pointer}
@@ -157,6 +159,49 @@ span.cw{cursor:default}
 .role.fatto p{color:var(--ember)}
 
 /* ---------- parole aperte (console) ---------- */
+/* i tre cifrari in breve, sulla sola console del narratore */
+.cif-m{margin-top:14px}
+.cif-h{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;margin-bottom:4px}
+.cif-s{font-size:17px;line-height:1;color:var(--cold)}
+.cif-r{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line)}
+.cif-r:last-child{border-bottom:0}
+.cif-k{flex:0 0 96px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--cold)}
+.cif-k span{display:block;letter-spacing:.04em;text-transform:none;color:var(--faint)}
+.cif-v{flex:1 1 auto;font-size:12.5px;line-height:1.5;color:var(--dim)}
+/* l'esempio svolto: parole inventate, si puo' mostrare a chiunque */
+.cif-e{margin-top:4px;font-size:12.5px;color:var(--faint)}
+.cif-e .mono{letter-spacing:.08em}
+.cif-e b{color:var(--warm);font-weight:600}
+.cif-n{color:var(--faint)}
+.cif-m>.cif-e{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+/* lo strumento delle chiavi, nel Custode */
+.chiave-out{margin-top:10px;text-align:center;font-size:26px;letter-spacing:.12em;color:var(--ember);background:#11131a;border:1px solid var(--line);border-radius:10px;padding:10px}
+/* tutti i reperti, sulla sola console: niente si stampa, si mostra da qui */
+.rep-l{display:flex;flex-direction:column;gap:4px;max-height:270px;overflow:auto;margin-top:10px}
+.rep-b{display:flex;align-items:baseline;gap:10px;text-align:left;padding:7px 10px}
+.rep-b b{font-family:var(--mono);font-size:13px;letter-spacing:.14em;color:var(--warm);flex:0 0 auto}
+.rep-b s{text-decoration:none;color:var(--dim);font-size:12.5px}
+.rep-chiaro{white-space:pre-wrap;font-size:14px;line-height:1.75;margin:8px 0 0;color:var(--te)}
+.rep-w{font-family:var(--mono);font-weight:600;color:var(--warm);background:var(--ember-dk);
+  border:1px solid var(--line);border-radius:6px;padding:0 5px;white-space:nowrap}
+.rep-note{margin-top:16px;padding-top:12px;border-top:1px dashed var(--line)}
+.rep-t{margin-top:8px}
+.rep-r{display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.rep-r:last-child{border-bottom:0}
+.rep-s{flex:0 0 auto;color:var(--cold)}
+.rep-k{flex:0 0 auto;color:var(--ember);font-weight:600}
+.rep-c{color:var(--faint);font-size:11.5px}
+/* la scena da girare verso il tavolo: solo il reperto, in simboli, e il suo QR */
+.rep-scena{position:fixed;inset:0;background:#07080b;z-index:60;overflow:auto;padding:18px}
+.rep-x{position:fixed;top:12px;right:14px;z-index:61}
+.rep-in{max-width:620px;margin:34px auto 0;display:flex;flex-direction:column;align-items:center}
+.rep-sim{font-family:var(--mono);font-size:15px;line-height:2.1;letter-spacing:.16em;
+  white-space:pre-wrap;color:var(--te);width:100%}
+.rep-sim .rep-w{letter-spacing:.1em}
+.rep-qr{background:#fff;padding:14px;border-radius:12px;margin:22px 0 10px;line-height:0}
+.rep-qr svg{display:block;width:min(66vw,260px);height:min(66vw,260px);shape-rendering:crispEdges}
+.rep-cod{font-size:24px;letter-spacing:.3em;color:var(--warm)}
+@media(max-width:380px){.cif-r{flex-direction:column;gap:2px}.cif-k{flex:none}}
 .pa-r{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--faint)}
 .pa-r.on{color:var(--dim)}
 .pa-id{flex:0 0 auto;font-size:11px;min-width:64px}

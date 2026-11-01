@@ -13,6 +13,7 @@ enigmi.md
 locazioni.md
 cifrari.md
 SPECIFICA-APP.md
+CODIFICA.md
 
 # materiale di lavoro: i verificatori contengono le soluzioni
 verifica_puzzle.py
@@ -26,6 +27,7 @@ controlla_testi.py
 # e che la guardia di push.ps1 fermerebbe
 prove/
 dati.js.prima
+.claude/launch.json
 _casi.json
 push-log.txt
 diagnosi.txt
@@ -34,3 +36,23 @@ __pycache__/
 
 # copia temporanea servita in rete locale
 _serve/
+
+# lo strumento di conversione: contiene le frasi delle regole
+da_excel.py
+contenuti.nuovo.md
+master.html
+genera_master.py
+Materials*.xlsx
+Claude outputs/
+soluzioni.json
+~$*
+.cert/
+
+# il guscio Android: gli assets e la build sono generati, e l APK contiene i testi
+android/app/src/main/assets/
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+*.apk
+ALFABETO-SIMBOLI.md
