@@ -3251,12 +3251,14 @@ V.ruoli = () => {
   g.append(el('button', { class: 'role gm', type: 'button', onclick: () => go('master') },
     el('div', { class: 'n' }, 'Master'), el('h3', {}, 'Console di Sistema'),
     el('p', {}, 'Budget del loop, costi in minuti, parole aperte, failsafe. Solo per il narratore.')));
-  app.append(g, progresso());
+  app.append(g);
 };
 
-/** Quanto ha fatto QUESTO telefono. Non compare finche' non c'e' niente: una fila di
-    zeri a inizio serata non dice nulla a nessuno. I numeri sono di questo dispositivo
-    soltanto — non c'e' rete, e il tavolo sono tre telefoni che sanno cose diverse. */
+/** Quanto ha aperto QUESTO telefono. Sta solo nel Custode, che e' il ruolo di chi tiene
+    il conto: sul menu di tutti sarebbe il suo mestiere regalato agli altri due. Non compare
+    finche' non c'e' niente — una fila di zeri a inizio serata non dice nulla a nessuno —
+    e i numeri sono di questo dispositivo soltanto, perche' non c'e' rete e i tre telefoni
+    sanno cose diverse. */
 function progresso() {
   const box = el('div');
   if (!DATI_OK) return box;
@@ -3519,33 +3521,36 @@ V.log = () => {
   const cerca = el('input', { type: 'text', placeholder: 'parola, sigillo, titolo, LOG…', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false' });
   const numero = pred => S.archivio.findIndex(pred) + 1;
 
+  /** -> false se non e' entrato niente nell'archivio: con lo scanner acceso vuol dire
+      «tieni la fotocamera aperta», perche' basta inquadrare il sigillo giusto. */
   const registra = raw => {
     const v = String(raw || '').trim();
-    if (!v) { dice('err', '⚠ Scrivi il codice di un sigillo (quattro segni) oppure una parola che il Traduttore ha aperto.'); inp.focus(); return; }
+    if (!v) { dice('err', '⚠ Scrivi il codice di un sigillo (quattro segni) oppure una parola che il Traduttore ha aperto.'); inp.focus(); return false; }
     const t = trovaTesto(v);
     if (t) {
       const nuovo = visita(t.id); aperto = 't:' + t.id; inp.value = '';
       // il reperto appena registrato puo' essere quello che spiega una chiave
-      if (nuovo && (t.rivela || []).includes('chiave')) { go('log'); return; }
+      if (nuovo && (t.rivela || []).includes('chiave')) { go('log'); return true; }
       dice('ok', (nuovo ? '✓ Nell’archivio come #' + numero(a => a.k === 't' && a.id === t.id) + ': ' : 'Era già nell’archivio: ') + t.titolo);
-      disegna(); return;
+      disegna(); return true;
     }
     if (eNumeroSigillo(v)) {
-      dice('hint', '«' + v + '» è il numero del sigillo, non il codice. Il codice del sigillo sono i quattro segni stampati sotto.'); return;
+      dice('hint', '«' + v + '» è il numero del sigillo, non il codice. Il codice del sigillo sono i quattro segni stampati sotto.'); return false;
     }
     if (perSigillo(D.log, v) || /^LOG\W*\d+$/i.test(v)) {
-      dice('hint', 'Le voci del registro non si scansionano: si aprono con la parola che le apre. Chiedetela al Traduttore.'); return;
+      dice('hint', 'Le voci del registro non si scansionano: si aprono con la parola che le apre. Chiedetela al Traduttore.'); return false;
     }
     const w = Cifrari.normParola(v);
-    if (!w) { dice('err', '⚠ «' + v + '» non è né un sigillo né una parola.'); return; }
+    if (!w) { dice('err', '⚠ «' + v + '» non è né un sigillo né una parola.'); return false; }
     const h = Cifrari.impronta(w);
     if (VOCI.has(h)) {
       const r = apriParola(h, w); aperto = 'p:' + h; inp.value = '';
       dice('ok', r.nuova ? '✓ «' + w + '» entra nell’archivio come #' + numero(a => a.k === 'p' && a.h === h) + '.' : '«' + w + '» era già nell’archivio.');
-      disegna(); return;
+      disegna(); return true;
     }
     const costo = spendi('indovina', '«' + w + '» a vuoto');
     dice('err', '⚠ «' + w + '» non è una parola dei reperti. ' + rigaCosto(costo));
+    return false;
   };
 
   const testaVoce = (a, tipo, nome, sotto) => el('button', { class: 'arch-h', type: 'button', 'aria-expanded': String(aperto === a.chiave),
@@ -3619,17 +3624,17 @@ V.log = () => {
   }
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') registra(inp.value); });
   cerca.addEventListener('input', disegna);
-  const [scanBtn, camBox] = scanner(c => registra(c));
+  const [scanBtn, luceBtn, camBox] = scanner(registra);
   app.append(
     el('div', { class: 'card acc' },
       el('div', { class: 'eyebrow', style: 'color:var(--ember);margin-bottom:10px' }, 'Registra'),
-      scanBtn, camBox,
+      scanBtn, luceBtn, camBox,
       el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Sigillo o parola'), inp),
       el('button', { class: 'big log-go', type: 'button', style: 'margin-top:12px', onclick: () => registra(inp.value) }, 'Registra'),
       fb),
     pannelloChiavi(),
     el('label', { class: 'fld', style: 'margin-top:18px' }, el('span', { class: 'lbl' }, 'Cerca nell’archivio'), cerca),
-    conta, lista, piede());
+    conta, lista, progresso(), piede());
   disegna();
 };
 

@@ -123,7 +123,13 @@ if ($staged.Count -gt 0) {
   $msg = "Aggiornamento contenuti"
   if ($primoCommit) { $msg = "The Ember Loop - software di sessione" }
   if ($Messaggio)   { $msg = $Messaggio }
-  $r = Invoke-Git commit -q -m $msg
+  # Il messaggio passa da un FILE, non da -m: in un -m le virgolette dentro al testo
+  # le mangia il passaggio degli argomenti, e git legge il resto del messaggio come
+  # un elenco di file che non esistono. Con -F il testo arriva com'e'.
+  $fileMsg = Join-Path ([System.IO.Path]::GetTempPath()) ("emberloop-commit-" + [guid]::NewGuid().ToString("N") + ".txt")
+  [System.IO.File]::WriteAllText($fileMsg, $msg, (New-Object System.Text.UTF8Encoding($false)))
+  $r = Invoke-Git commit -q -F $fileMsg
+  Remove-Item -LiteralPath $fileMsg -ErrorAction SilentlyContinue
   if (-not $r.Ok) { Fail "git commit fallito: $($r.Out)`n  Se dice 'Please tell me who you are', imposta:`n    git config --global user.name  ""Alessandro Pesetti""`n    git config --global user.email ""alessandro.pesetti@gmail.com""" }
   Write-Host "  [ok] commit creato"
   if ($PuliziaStoria) {
