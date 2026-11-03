@@ -40,7 +40,9 @@ _serve/
 # lo strumento di conversione: contiene le frasi delle regole
 da_excel.py
 contenuti.nuovo.md
-master.html
+# master.html SI PUBBLICA, per decisione di Alessandro del 2026-11-03: serve sul Mac
+# e il trasferimento passa da git. Contiene tutte le soluzioni, e il repository e'
+# pubblico con Pages attivo. genera_master.py invece resta fuori.
 genera_master.py
 Materials*.xlsx
 Claude outputs/
@@ -48,11 +50,14 @@ soluzioni.json
 ~$*
 .cert/
 
-# il guscio Android: gli assets e la build sono generati, e l APK contiene i testi
+# il guscio Android: gli assets e la build sono generati
 android/app/src/main/assets/
 android/app/build/
 android/build/
 android/.gradle/
 android/local.properties
+# L'APK SI PUBBLICA, stessa decisione del 2026-11-03 e stesso prezzo: dentro ci sono
+# tutti i testi in chiaro. Gli altri .apk, quelli di lavoro, restano fuori.
 *.apk
+!android/EmberLoop.apk
 ALFABETO-SIMBOLI.md

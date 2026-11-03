@@ -72,7 +72,8 @@ if (-not $r.Ok) { Fail "impossibile leggere lo staging: $($r.Out)" }
 $staged = @($r.Out | Where-Object { $_ -ne "" })
 
 # ---- 3a. PROTEZIONE: file che non devono mai uscire ----
-$vietati = @($staged | Where-Object { $_ -match 'CHIAVI-MASTER|contenuti\.(py|md)|\.segreti|SPECIFICA-APP|cifrari\.(py|md)|soluzioni\.json|master\.html|genera_master\.py|da_excel\.py|Materials.*\.xlsx' })
+# master.html non e' piu' in questa lista: si pubblica di proposito dal 2026-11-03.
+$vietati = @($staged | Where-Object { $_ -match 'CHIAVI-MASTER|contenuti\.(py|md)|\.segreti|SPECIFICA-APP|cifrari\.(py|md)|soluzioni\.json|genera_master\.py|da_excel\.py|Materials.*\.xlsx' })
 if ($vietati.Count -gt 0) {
   Write-Host ""
   Write-Host "  FERMO TUTTO - file proibiti nello staging:" -ForegroundColor Red
@@ -83,6 +84,13 @@ if ($vietati.Count -gt 0) {
 
 # ---- 3b. PROTEZIONE: nessun segreto nel CONTENUTO di nessun file ----
 # I segreti da cercare si leggono da CHIAVI-MASTER.md, che resta solo in locale.
+#
+# ECCEZIONE, decisa da Alessandro il 2026-11-03: questi due file contengono le
+# soluzioni e si pubblicano LO STESSO, perche' servono sul Mac e il trasferimento
+# passa da git. Sono elencati uno per uno di proposito: la guardia continua a valere
+# su tutti gli altri file, e un segreto che finisse altrove la fa scattare come
+# prima. Per richiuderla: togli i due nomi da qui e rimettili in .gitignore.
+$pubblicaLoStesso = @('master.html', 'android/EmberLoop.apk')
 $segreti = @()
 if (Test-Path ".segreti") {
   $segreti = @(Get-Content ".segreti" | Where-Object { $_.Trim() -ne "" } | ForEach-Object { $_.Trim() })
@@ -93,6 +101,10 @@ if ($segreti.Count -eq 0) {
   $trovati = @()
   foreach ($f in $staged) {
     if (-not (Test-Path $f)) { continue }
+    if ($pubblicaLoStesso -contains $f) {
+      Write-Host ("  [!] {0} esce CON LE SOLUZIONI DENTRO, per scelta esplicita" -f $f) -ForegroundColor Yellow
+      continue
+    }
     $testo = Get-Content -Raw -ErrorAction SilentlyContinue $f
     if ($null -eq $testo) { continue }
     foreach ($sg in $segreti) {
