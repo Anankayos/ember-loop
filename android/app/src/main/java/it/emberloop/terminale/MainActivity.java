@@ -48,6 +48,11 @@ public class MainActivity extends AppCompatActivity {
                 .build();
 
         web = new WebView(this);
+        // Cinque ore con il telefono sul tavolo: se lo schermo si spegne ogni trenta
+        // secondi si passa la serata a sbloccarlo. Non serve nessun permesso, e' un
+        // flag della vista; la pagina prova anche da sola con l'API Wake Lock, che
+        // nel WebView non c'e' sempre.
+        web.setKeepScreenOn(true);
         setContentView(web);
 
         WebSettings s = web.getSettings();

@@ -5,10 +5,15 @@
     powershell -ExecutionPolicy Bypass -File .\push.ps1 -Repo git@github.com:Anankayos/ember-loop.git
 
   Prima crea su github.com un repository VUOTO (senza README, senza .gitignore).
+
+  -Messaggio "..."  scrive quel messaggio di commit invece di quello generico.
+                    Non tocca niente dei controlli: si committa sempre e solo
+                    quello che la guardia dei segreti ha gia' guardato.
 #>
 param(
   [Parameter(Mandatory = $true)][string]$Repo,
   [string]$Branch = "main",
+  [string]$Messaggio = "",
   [switch]$Force,
   [switch]$PuliziaStoria
 )
@@ -115,7 +120,9 @@ if ($staged.Count -gt 0) {
   Write-Host "  File che verranno pubblicati ($($staged.Count)):" -ForegroundColor DarkCyan
   $staged | ForEach-Object { Write-Host "    $_" }
   Write-Host ""
-  $msg = if ($primoCommit) { "The Ember Loop - software di sessione" } else { "Aggiornamento contenuti" }
+  $msg = "Aggiornamento contenuti"
+  if ($primoCommit) { $msg = "The Ember Loop - software di sessione" }
+  if ($Messaggio)   { $msg = $Messaggio }
   $r = Invoke-Git commit -q -m $msg
   if (-not $r.Ok) { Fail "git commit fallito: $($r.Out)`n  Se dice 'Please tell me who you are', imposta:`n    git config --global user.name  ""Alessandro Pesetti""`n    git config --global user.email ""alessandro.pesetti@gmail.com""" }
   Write-Host "  [ok] commit creato"

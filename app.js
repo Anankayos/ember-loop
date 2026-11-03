@@ -71,7 +71,11 @@ const eNumeroSigillo = code => !!perSigillo(D.testi, code);
 
 /* ---------------- stato locale (per dispositivo) ---------------- */
 const SK = 'emberloop.v1';
-const vuoto = () => ({ v: 2, testi: [], parole: {}, log: [], stanze: [], enigmi: [], mecc: [], archivio: [], storico: [] });
+/* ruolo e ultimo tengono il posto dove si era: riaprendo l'app si torna li' invece che
+   al menu. Lo stato di un telefono gia' in gioco resta valido: le chiavi che non c'erano
+   le riempie vuoto() con l'Object.assign qui sotto, quindi non serve cambiare versione. */
+const vuoto = () => ({ v: 2, testi: [], parole: {}, log: [], stanze: [], enigmi: [], mecc: [], archivio: [], storico: [],
+                       ruolo: null, ultimo: null });
 let S = vuoto(), STATO_VECCHIO = false;
 try {
   const x = JSON.parse(localStorage.getItem(SK) || 'null');
@@ -97,6 +101,32 @@ function segna(tipo, cosa, minuti) { S.storico.push({ t: tipo, c: cosa, m: minut
 /** Tira il costo di un'azione e lo scrive nello storico. */
 function spendi(voce, cosa) { const t = tira(COSTI[voce]); if (t.min > 0) segna(voce, cosa, t.min); return t; }
 const rigaCosto = t => t.min > 0 ? 'Costo ' + t.come + ' — ditelo al narratore.' : 'Nessun costo.';
+
+/* ---------------- tatto e schermo ----------------
+   Due comodita', non due funzioni. Se il telefono non le ha non cambia niente e non si
+   avvisa nessuno: un avviso per una comodita' mancante e' solo rumore al tavolo. */
+const TATTO = { letto: 30, aperta: [18, 40, 18], errore: [12, 70, 12] };
+function vibra(come) { try { if (navigator.vibrate) navigator.vibrate(TATTO[come] || come); } catch (e) {} }
+/* Lo schermo non si spegne mentre si gioca: cinque ore col telefono sul tavolo e lo
+   sblocco ogni trenta secondi e' il modo piu' rapido di rovinare il ritmo. Nell'APK la
+   stessa cosa la fa il guscio (setKeepScreenOn), che non dipende da questa API. */
+const Sveglia = {
+  presa: null,
+  async tieni() {
+    try {
+      if (!navigator.wakeLock || this.presa) return;
+      this.presa = await navigator.wakeLock.request('screen');
+      this.presa.addEventListener('release', () => { this.presa = null; });
+    } catch (e) { this.presa = null; }
+  },
+  lascia() { try { if (this.presa) this.presa.release(); } catch (e) {} this.presa = null; }
+};
+/* Via dalla pagina: fotocamera spenta e schermo libero. Tornando, se si e' dentro un
+   ruolo, lo schermo si ritiene acceso: il permesso di veglia non sopravvive da solo. */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') { if (S.ruolo) Sveglia.tieni(); }
+  else { Sveglia.lascia(); Cam.stop(document.getElementById('cam')); }
+});
 
 /* ---------------- la conoscenza: si apre e non si richiude ---------------- */
 function visita(id) {
@@ -165,16 +195,38 @@ function glifi(seme, n) {
   return s;
 }
 
-/* ---------------- scanner QR ---------------- */
+/* ---------------- scanner QR ----------------
+   In sala la luce e' bassa e il sigillo e' stampato su carta. Contano tre cose: la messa
+   a fuoco continua, la luce della fotocamera dove c'e', e il fatto che il riquadro che si
+   vede sia esattamente il ritaglio che viene letto. La quarta e' non scaldare il telefono:
+   si legge un fotogramma ogni ~65 ms, non uno per ogni refresh dello schermo. */
+const PASSO_MS = 65;      // fra due letture: ~15 al secondo, piu' che abbastanza per un cartellino fermo
+const QUOTA = 0.72;       // il lato del riquadro, in frazione del lato corto del fotogramma
 const Cam = {
-  stream: null, raf: 0,
+  stream: null, track: null, raf: 0, luce: false, errore: '', ultimo: '', quando: 0, avvisoFino: 0,
+  /** La fotocamera ha la luce? Il pulsante si mostra solo se c'e' davvero. */
+  haLuce() {
+    try { return !!(this.track && this.track.getCapabilities && this.track.getCapabilities().torch); }
+    catch (e) { return false; }
+  },
+  /** Accende o spegne la luce. -> false se il telefono non l'ha lasciata fare. */
+  async luceCosi(on) {
+    if (!this.track) return false;
+    try { await this.track.applyConstraints({ advanced: [{ torch: !!on }] }); this.luce = !!on; return true; }
+    catch (e) { return false; }
+  },
   async start(box, onCode) {
     const v = box.querySelector('video'), cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+    this.errore = ''; this.luce = false; this.ultimo = ''; this.avvisoFino = 0;
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' },
-                 width: { ideal: 1280 }, height: { ideal: 720 } } });
+                 width: { ideal: 1920 }, height: { ideal: 1080 },
+                 // a venti centimetri da un foglio, la messa a fuoco continua e' la
+                 // differenza fra leggere e non leggere. Dove non c'e', si ignora.
+                 advanced: [{ focusMode: 'continuous' }] } });
     } catch (e) { this.errore = (e && e.name) || 'errore'; return false; }
+    this.track = this.stream.getVideoTracks()[0] || null;
 
     // ORDINE CRITICO PER iOS: il contenitore va reso visibile PRIMA di play().
     // Safari non riproduce un video dentro un elemento display:none, quindi
@@ -186,49 +238,86 @@ const Cam = {
     v.srcObject = this.stream;
     try { await v.play(); }
     catch (e) { this.errore = 'play:' + ((e && e.name) || 'rifiutato'); this.stop(box); return false; }
-    let frame = 0, muti = 0;
-    const cerca = (sx, sy, sw, sh, dw) => {
-      const dh = Math.round(sh * dw / sw);
+
+    const cap = box.querySelector('.cap'), ret = box.querySelector('.ret');
+    const dice = t => { if (cap) cap.textContent = t; };
+    /** Il riquadro disegnato prende il lato corto del fotogramma, come il ritaglio:
+        cosi' si inquadra esattamente quello che si legge. */
+    const squadra = () => {
+      if (!ret || !v.videoWidth) return;
+      const orizzontale = v.videoWidth >= v.videoHeight;
+      ret.style.width = orizzontale ? 'auto' : (QUOTA * 100) + '%';
+      ret.style.height = orizzontale ? (QUOTA * 100) + '%' : 'auto';
+    };
+    const cerca = (sx, sy, sw, sh, dw, inv) => {
+      const dh = Math.max(1, Math.round(sh * dw / sw));
       cv.width = dw; cv.height = dh;
       cx.drawImage(v, sx, sy, sw, sh, 0, 0, dw, dh);
       const d = cx.getImageData(0, 0, dw, dh);
-      return jsQR(d.data, dw, dh, { inversionAttempts: 'attemptBoth' });
+      return jsQR(d.data, dw, dh, { inversionAttempts: inv });
     };
-    const tick = () => {
-      if (v.readyState === v.HAVE_ENOUGH_DATA && v.videoWidth) {
-        frame++;
-        const W = v.videoWidth, H = v.videoHeight;
-        // passata A: tutto il fotogramma, ridotto quanto basta
-        let r = cerca(0, 0, W, H, Math.min(800, W));
-        // passata B: solo il centro, a piena risoluzione. Serve quando il sigillo
-        // e' lontano o piccolo: nella passata A i moduli sarebbero troppo fini.
-        if (!r) {
-          const lato = Math.round(Math.min(W, H) * 0.72);
-          r = cerca(Math.round((W - lato) / 2), Math.round((H - lato) / 2), lato, lato, Math.min(800, lato));
-        }
-        const cap = box.querySelector('.cap');
-        if (cap && frame % 8 === 0) cap.textContent = 'cerco un sigillo… ' + frame + ' fotogrammi';
-        if (r && r.data) { this.stop(box); onCode(r.data.trim().toUpperCase()); return; }
-      } else {
+    let letture = 0, muti = 0, scorsa = 0, squadrato = false;
+    const tick = adesso => {
+      this.raf = requestAnimationFrame(tick);
+      if (adesso - scorsa < PASSO_MS) return;
+      scorsa = adesso;
+      if (v.readyState !== v.HAVE_ENOUGH_DATA || !v.videoWidth) {
         // il video non sta producendo fotogrammi: dopo qualche secondo avvisa,
         // invece di restare in silenzio come faceva prima.
-        muti++;
-        const cap = box.querySelector('.cap');
-        if (cap && muti === 120) cap.textContent = 'il video non parte (readyState ' + v.readyState + ')';
+        if (++muti === 45) dice('il video non parte (readyState ' + v.readyState + ')');
+        return;
       }
-      this.raf = requestAnimationFrame(tick);
+      if (!squadrato) { squadra(); squadrato = true; }
+      letture++;
+      const W = v.videoWidth, H = v.videoHeight, lato = Math.round(Math.min(W, H) * QUOTA);
+      // passata A: il riquadro, a piena definizione. E' quello che il giocatore inquadra.
+      let r = cerca(Math.round((W - lato) / 2), Math.round((H - lato) / 2), lato, lato, Math.min(800, lato), 'dontInvert');
+      // passata B: tutto il fotogramma, ridotto. Prende il sigillo che e' fuori dal riquadro.
+      if (!r) r = cerca(0, 0, W, H, Math.min(720, W), 'dontInvert');
+      // passata C: una volta su quattro, provando anche il negativo. Costa il doppio e serve
+      // solo a un sigillo stampato al rovescio o ripreso da uno schermo: non ogni fotogramma.
+      if (!r && letture % 4 === 0) r = cerca(0, 0, W, H, Math.min(720, W), 'attemptBoth');
+      if (r && r.data) { this.letto(box, r.data.trim().toUpperCase(), onCode, dice); return; }
+      // un avviso appena scritto non si copre con il «cerco» del fotogramma dopo:
+      // tre decimi di secondo di messaggio non li legge nessuno.
+      if (letture % 8 === 0 && Date.now() > this.avvisoFino)
+        dice(letture < 90 ? 'cerco un sigillo…' : 'cerco un sigillo… avvicinati, o accendi la luce');
     };
-    tick(); return true;
+    this.raf = requestAnimationFrame(tick);
+    return true;
+  },
+  /** Un codice letto. Se chi lo riceve non lo riconosce la fotocamera NON si chiude:
+      si riaggiusta la mira e si riprova, che e' quello che fa chiunque. */
+  letto(box, code, onCode, dice) {
+    const q = Date.now();
+    if (code === this.ultimo && q - this.quando < 1500) return;   // lo stesso codice due volte: una sola
+    this.ultimo = code; this.quando = q;
+    box.classList.add('preso');
+    setTimeout(() => box.classList.remove('preso'), 220);
+    vibra('letto');
+    if (onCode(code) !== false) { this.stop(box); return; }
+    this.avvisoFino = q + 2500;
+    dice('«' + code + '» non è un sigillo di questo gioco — riprova');
   },
   stop(box) {
-    cancelAnimationFrame(this.raf);
+    cancelAnimationFrame(this.raf); this.raf = 0;
+    if (this.luce) this.luceCosi(false);
     if (this.stream) { this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
-    if (box) { box.style.display = 'none'; const v = box.querySelector('video'); if (v) v.srcObject = null; }
+    this.track = null; this.luce = false;
+    if (box) { box.style.display = 'none'; box.classList.remove('preso');
+      const v = box.querySelector('video'); if (v) v.srcObject = null; }
   }
 };
+/** -> [pulsante, pulsante della luce, riquadro]. onCode torna false se il codice non
+    apre niente: allora la fotocamera resta accesa. */
 function scanner(onCode) {
   const box = el('div', { id: 'cam' }, el('video', { playsinline: '' }),
     el('div', { class: 'ret' }), el('div', { class: 'cap' }, 'inquadra il sigillo'));
+  const luce = el('button', { class: 'big ghost hide', type: 'button', onclick: async () => {
+      const ok = await Cam.luceCosi(!Cam.luce);
+      luce.textContent = !ok ? '☀  La luce non si accende' : Cam.luce ? '☀  Spegni la luce' : '☀  Luce';
+    } }, '☀  Luce');
+  const chiudi = () => { luce.classList.add('hide'); luce.textContent = '☀  Luce'; b.textContent = '⌘  Scansiona sigillo'; };
   const b = el('button', { class: 'big', type: 'button', onclick: async () => {
       if (typeof jsQR !== 'function') {
         b.textContent = '✕  Decodificatore QR non caricato';
@@ -237,16 +326,21 @@ function scanner(onCode) {
           'Manca jsQR.min.js accanto alla pagina. Usa il codice scritto sotto il sigillo.'));
         return;
       }
-      if (Cam.stream) { Cam.stop(box); b.textContent = '⌘  Scansiona sigillo'; return; }
+      if (Cam.stream) { Cam.stop(box); chiudi(); return; }
       b.textContent = 'Avvio fotocamera…';
-      // il primo fotogramma puo' contenere gia' il codice: in quel caso start()
-      // ritorna DOPO il callback, e non dobbiamo riscrivere l'etichetta.
+      // il codice puo' arrivare prima che si finisca di sistemare l'etichetta: letto
+      // dice che ci ha gia' pensato il callback, e non la si riscrive sopra.
       let letto = false;
-      const ok = await Cam.start(box, c => { letto = true; b.textContent = '⌘  Scansiona sigillo'; onCode(c); });
+      const ok = await Cam.start(box, c => {
+        const preso = onCode(c);
+        if (preso !== false) { letto = true; chiudi(); }
+        return preso;
+      });
       if (letto) {
-        // il codice e' stato letto sul primo fotogramma: il callback ha gia' sistemato tutto
+        // il sigillo era gia' nel primo fotogramma: chiudi() ha sistemato tutto
       } else if (ok) {
         b.textContent = '✕  Chiudi fotocamera';
+        luce.classList.toggle('hide', !Cam.haLuce());
       } else {
         const perche = Cam.errore === 'NotAllowedError' ? 'permesso negato'
           : Cam.errore === 'NotFoundError' ? 'nessuna fotocamera'
@@ -256,12 +350,16 @@ function scanner(onCode) {
         b.style.borderColor = 'var(--bad)'; b.style.color = 'var(--bad)';
       }
     } }, '⌘  Scansiona sigillo');
-  return [b, box];
+  return [b, luce, box];
 }
 
 /* ---------------- viste ---------------- */
 const V = {};
-function titolo(t, s) { vt.textContent = t; vs.textContent = s; clear(app); piedeEl = null; }
+function titolo(t, s) {
+  vt.textContent = t; vs.textContent = s; clear(app); piedeEl = null;
+  // un filo d'animazione all'ingresso: al tavolo si capisce che la schermata e' cambiata
+  app.classList.remove('entra'); void app.offsetWidth; app.classList.add('entra');
+}
 /** Con dati.js vecchio o assente le viste dei ruoli si fermano e dicono chi rimedia. */
 function avvisoDati() {
   return el('div', { class: 'card bad' },
@@ -281,6 +379,8 @@ V.ruoli = () => {
     ['03', 'stanze', "L'Apritore", 'Apre le porte di pietra tracciando i percorsi, e gli ingressi dei luoghi con le parole decifrate.']
   ];
   if (!DATI_OK) app.append(avvisoDati());
+  if (STATO_VECCHIO) app.append(el('p', { class: 'hint', style: 'margin:0 0 12px' },
+    'Su questo telefono c’era lo stato di una versione precedente dell’app: è stato ignorato.'));
   app.append(el('p', { class: 'hint', style: 'margin:0 0 18px' },
     'Tre rilevatori, tre terminali. Ognuno apre ciò che gli altri non possono.'));
   const g = el('div', { class: 'roles' });
@@ -289,13 +389,39 @@ V.ruoli = () => {
   g.append(el('button', { class: 'role gm', type: 'button', onclick: () => go('master') },
     el('div', { class: 'n' }, 'Master'), el('h3', {}, 'Console di Sistema'),
     el('p', {}, 'Budget del loop, costi in minuti, parole aperte, failsafe. Solo per il narratore.')));
-  app.append(g);
+  app.append(g, progresso());
 };
+
+/** Quanto ha fatto QUESTO telefono. Non compare finche' non c'e' niente: una fila di
+    zeri a inizio serata non dice nulla a nessuno. I numeri sono di questo dispositivo
+    soltanto — non c'e' rete, e il tavolo sono tre telefoni che sanno cose diverse. */
+function progresso() {
+  const box = el('div');
+  if (!DATI_OK) return box;
+  const righe = [
+    ['Reperti aperti', S.testi.length, (D.testi || []).length],
+    ['Parole decifrate', Object.keys(S.parole).length, UNICHE.length],
+    ['Voci di registro', S.log.length, (D.log || []).length],
+    ['Porte di pietra', S.stanze.length, (D.stanze || []).length],
+    ['Ingressi aperti', S.enigmi.length, (D.enigmi || []).length],
+  ].filter(r => r[2] > 0);
+  if (!righe.some(r => r[1] > 0)) return box;
+  const card = el('div', { class: 'card', id: 'progresso' }, el('div', { class: 'eyebrow' }, 'Su questo telefono'));
+  righe.forEach(([etichetta, fatti, tot]) => card.append(
+    el('div', { class: 'pg-r' + (fatti ? ' on' : '') },
+      el('span', { class: 'pg-l' }, etichetta),
+      el('span', { class: 'pg-b' }, el('i', { style: 'width:' + Math.round(100 * fatti / tot) + '%' })),
+      el('span', { class: 'pg-n mono' }, fatti + '/' + tot))));
+  card.append(el('p', { class: 'hint' },
+    'Resta qui e non si perde riaprendo l’app. Il reset del loop non lo tocca.'));
+  box.append(card);
+  return box;
+}
 
 /** Il corpo di un testo: il chiaro com'e', le parole cifrate come blocchi,
     quelle gia' aperte su questo telefono in chiaro e sottolineate. */
-function corpoTesto(t, onParola) {
-  const box = el('div', { class: 'plain' });
+function corpoTesto(t, onParola, rivelato) {
+  const box = el('div', { class: 'plain' + (rivelato ? ' rev' : '') });
   (t.corpo || []).forEach(s => {
     if (s.t === 'c') { box.append(s.v); return; }
     const v = PAROLE.get(s.w);
@@ -315,16 +441,19 @@ V.decifra = () => {
   const out = el('div'), gia = el('div');
   const errore = el('p', { class: 'err hide' });
   const codeIn = el('input', { type: 'text', placeholder: 'quattro segni', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false' });
-  const mostra = t => { mostraTesto(out, t); disegnaGia(); };
+  const mostra = t => { S.ultimo = t.id; save(); mostraTesto(out, t); disegnaGia(); };
+  /** -> false se il codice non apre niente: con lo scanner acceso vuol dire
+      «tieni la fotocamera aperta», perche' basta riaggiustare la mira. */
   const apri = code => {
     const t = trovaTesto(code);
     if (!t) { errore.textContent = eNumeroSigillo(code)
         ? '⚠ «' + code + '» è il numero del sigillo, quello grande in alto: serve al Custode per la chiave, non ad aprire. Il codice del sigillo sono i quattro segni stampati sotto.'
         : '⚠ Codice non riconosciuto: «' + code + '». Sono quattro segni stampati sotto il sigillo.';
-      errore.classList.remove('hide'); return; }
+      errore.classList.remove('hide'); vibra('errore'); return false; }
     errore.classList.add('hide'); codeIn.value = '';
     visita(t.id); mostra(t);
     if (out.scrollIntoView) out.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    return true;
   };
   const daCampo = () => { const c = codeIn.value.trim();
     if (!c) { errore.textContent = '⚠ Scrivi il codice stampato sotto il sigillo: quattro segni.';
@@ -334,31 +463,36 @@ V.decifra = () => {
   const disegnaGia = () => {
     clear(gia);
     if (!S.testi.length) return;
-    gia.append(el('div', { class: 'eyebrow', style: 'margin:22px 0 10px' }, 'Già aperti su questo telefono'));
+    gia.append(el('div', { class: 'eyebrow', style: 'margin:22px 0 10px' },
+      'Già aperti su questo telefono · ' + S.testi.length + ' di ' + (D.testi || []).length));
     S.testi.forEach(id => { const t = TESTI.get(id);
-      if (t) gia.append(el('button', { class: 'chip-btn', type: 'button', onclick: () => { mostra(t); out.scrollIntoView({ block: 'start' }); } },
+      if (t) gia.append(el('button', { class: 'chip-btn' + (id === S.ultimo ? ' ora' : ''), type: 'button',
+        onclick: () => { mostra(t); out.scrollIntoView({ block: 'start' }); } },
         id + ' · ' + t.titolo)); });
   };
-  const [scanBtn, camBox] = scanner(apri);
-  app.append(scanBtn, camBox,
+  const [scanBtn, luceBtn, camBox] = scanner(apri);
+  app.append(scanBtn, luceBtn, camBox,
     el('div', { class: 'card' },
       el('label', { class: 'fld' }, el('span', { class: 'lbl' }, 'Codice del sigillo'), codeIn),
       el('button', { class: 'big ghost', type: 'button', style: 'margin-top:12px', onclick: daCampo }, 'Apri reperto'),
       errore,
       el('p', { class: 'hint' }, 'Se la fotocamera non parte, digita il codice stampato sotto il sigillo.')),
     out, gia, piede());
+  // si riprende dal reperto che si stava leggendo: riaprire l'app non fa ricominciare
+  const ripresa = S.ultimo && TESTI.get(S.ultimo);
+  if (ripresa) mostraTesto(out, ripresa);
   disegnaGia();
 };
 
 function mostraTesto(out, t) {
   clear(out);
   const card = el('div', { class: 'card testo' }), dec = el('div');
-  const disegna = () => {
+  const disegna = rivelato => {
     clear(card);
     card.append(el('div', { class: 'eyebrow' }, t.id + ' · ' + nomePianeta(t.pianeta)),
       el('h3', { class: 'tit' }, t.titolo),
       el('div', { class: 'glifi-riga', 'aria-hidden': 'true' }, glifi(t.id, 25)),
-      corpoTesto(t, (s, v) => decodificatore(dec, t, s, v, disegna)));
+      corpoTesto(t, (s, v) => decodificatore(dec, t, s, v, disegna), rivelato));
     if (t.cita) card.append(el('p', { class: 'cita' }, 'Questo reperto ne nomina un altro.'));
     if ((t.corpo || []).some(s => s.t === 'p' && PAROLE.get(s.w) && !S.parole[PAROLE.get(s.w).hash]))
       card.append(el('p', { class: 'hint' }, 'Tocca una parola cifrata per aprire il decodificatore. Servono tutti e tre.'));
@@ -419,7 +553,8 @@ function decodificatore(dec, t, seg, voce, ridisegnaTesto) {
     const uscita = Cifrari.applica(ra, ro, seg.c, chiave.k);
     if (Cifrari.impronta(uscita) === voce.hash) {
       const r = apriParola(voce.hash, uscita);
-      ridisegnaTesto();
+      vibra('aperta');
+      ridisegnaTesto(true);
       clear(dec);
       dec.append(el('div', { class: 'card acc' },
         el('div', { class: 'eyebrow', style: 'color:var(--ember)' }, 'Parola aperta'),
@@ -430,6 +565,7 @@ function decodificatore(dec, t, seg, voce, ridisegnaTesto) {
         el('p', { class: 'costo' }, rigaCosto(costo))));
     } else {
       // niente verdetto e niente indizi su quale parte sia sbagliata: devono capirlo loro
+      vibra('errore');
       esito.append(el('div', { class: 'uscita mono' }, uscita), el('p', { class: 'costo' }, rigaCosto(costo)));
     }
   };
@@ -679,11 +815,12 @@ function ingresso(E) {
       const w = Cifrari.normParola(inp.value);
       if (!w) { fb.className = 'err'; fb.textContent = '⚠ Scrivi la parola decifrata: la legge il Traduttore dal suo reperto.'; inp.focus(); return; }
       if (Cifrari.impronta(w) === E.parola_hash) {
-        S.enigmi.push(E.id); save();
+        S.enigmi.push(E.id); save(); vibra('aperta');
         if (VOCI.has(E.parola_hash)) apriParola(E.parola_hash, w);
         disegna(); return;
       }
       const costo = spendi('porta', E.nome + ' · «' + w + '»');
+      vibra('errore');
       fb.className = 'err'; fb.textContent = '⚠ «' + w + '» non apre questo ingresso. ' + rigaCosto(costo);
       inp.value = '';
     };
@@ -863,7 +1000,7 @@ function porta(st) {
   const controlla = () => {
     const fine = path.length && stesso(path[path.length - 1], P.end);
     if (fine && risolto(P, path)) {
-      if (!giaAperta()) { S.stanze.push(st.id); save(); }
+      if (!giaAperta()) { S.stanze.push(st.id); save(); vibra('aperta'); }
       dice('ok', '✓ La pietra si muove.');
     } else if (fine) dice('err', '✕ La pietra non si muove: qualcosa non torna.');
     else if (!path.length) dice('hint', giaAperta() ? 'Questa porta è già aperta. Puoi ritracciarla quanto vuoi.' : 'Parti dal nodo pieno.');
@@ -1257,6 +1394,11 @@ V.master = () => {
 /* ---------------- router ---------------- */
 function go(v) {
   Cam.stop(document.getElementById('cam'));
+  // Dove si era: riaprendo l'app — l'APK la riapre senza hash — si torna qui invece che
+  // al menu. Tornare al menu di proposito e' a sua volta «dove si e'», e lo cancella.
+  const dentro = !!V[v] && v !== 'ruoli';
+  if (S.ruolo !== (dentro ? v : null)) { S.ruolo = dentro ? v : null; save(); }
+  if (dentro) Sveglia.tieni(); else Sveglia.lascia();
   (V[v] || V.ruoli)();
   if (v && v !== 'ruoli') back.classList.remove('hide');
   window.scrollTo(0, 0);
@@ -1264,4 +1406,4 @@ function go(v) {
 }
 back.addEventListener('click', () => go('ruoli'));
 window.addEventListener('hashchange', () => go(location.hash.slice(1) || 'ruoli'));
-go(location.hash.slice(1) || 'ruoli');
+go(location.hash.slice(1) || S.ruolo || 'ruoli');
