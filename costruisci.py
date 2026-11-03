@@ -309,16 +309,27 @@ def fughe(dati, parole, codici):
     return trovate
 
 
+# ECCEZIONE, decisa da Alessandro il 2026-11-03: questi file escono CON LE SOLUZIONI
+# DENTRO, perche' servono sul Mac e il trasferimento passa da git. Sono elencati uno per
+# uno di proposito: la guardia continua a cercare i segreti in tutti gli altri file. La
+# stessa eccezione, con lo stesso nome, sta in push.ps1 ($pubblicaLoStesso). Per
+# richiuderla: togli il nome da qui e da push.ps1, e rimetti il file in .gitignore.
+PUBBLICA_LO_STESSO = {"master.html"}
+
+
 def pubblicabili():
     """I file che push.ps1 pubblicherebbe e servi.ps1 servirebbe: tutti tranne quelli in .gitignore.
-       L'elenco si legge da .gitignore, cosi' aggiungere una riga li' aggiorna anche questo."""
+       L'elenco si legge da .gitignore, cosi' aggiungere una riga li' aggiorna anche questo.
+       PUBBLICA_LO_STESSO esce da qui: si pubblica ma non si controlla, perche' le soluzioni
+       dentro ci devono stare."""
     esclusi = set()
     if os.path.exists(".gitignore"):
         esclusi = {r.strip().rstrip("/") for r in open(".gitignore", encoding="utf-8")
                    if r.strip() and not r.strip().startswith("#")}
     else:
         avv(".gitignore non trovato: considero pubblicabile qualunque file.")
-    return [f for f in sorted(os.listdir(".")) if os.path.isfile(f) and f not in esclusi]
+    return [f for f in sorted(os.listdir(".")) if os.path.isfile(f)
+            and f not in esclusi and f not in PUBBLICA_LO_STESSO]
 
 
 def perdite_nei_file(segreti, file, sostituti=None):

@@ -83,21 +83,22 @@ window.DATI = {
   "IRIS-3": "25:AAAAAAAAD+q/hBMQQuiLoXWF0Loi6EEBBD+q/gAHAALsRIOpIsLJKyGikCDqEoAAebA/iE4QU7sLrhKF0tGC60ohBPRw/lioAAAAAAAAAA==",
   "IRIS-4": "25:AAAAAAAAD+y/hBPQQutLoXR10Lri6EE9BD+q/gAUAABlKoMkvEL4teGKIqBqH/gASRg/mCwQVAQLpcoF0loC6GdhBEKQ/iEgAAAAAAAAAA==",
   "IRIS-5": "25:AAAAAAAAD+m/hBJQQuhLoXWl0Lp66EE9BD+q/gALAALtxISpgAP+uqDhLODeAIgAabQ/icIQXHsLqXKF0sGC6zIhBHRw/iCoAAAAAAAAAA==",
+  "IRIS-6": "25:AAAAAAAAD+g/hBKQQumLoXXl0LpS6EEJBD+q/gAMAALvRIfq4wH8s8E77JCvaqgAfbA/mkoQX/sLr5KF0oGC6rohBOBw/mioAAAAAAAAAA==",
   "IRIS-7": "25:AAAAAAAAD+u/hBHQQuqroXSV0Lqq6EEJBD+q/gAeAABiKoEljQKvbSHopgBDlagAfyQ/hKwQW0QLpSoF0goC6H9hBF6Q/j8gAAAAAAAAAA==",
   "IRIS-8": "25:AAAAAAAAD+Q/hBKQQuqroXVF0LpC6EEtBD+q/gAFAAG1hgWG3AOq1MFqD7CfobgARig/uwAQTgQLri6F1XwC6VdhBHKg/mOwAAAAAAAAAA==",
   "IRIS-9": "25:AAAAAAAAD+E/hBZQQumLoXRV0Loy6EFxBD+q/gAUAADzMQJjqYLYN6BAtaDv0igARxw/u5AQV+kLrNuF0rrC6D+BBJFQ/mY4AAAAAAAAAA==",
   "IRIS-10": "25:AAAAAAAAD+Y/hBSQQuiLoXTV0Loy6EF9BD+q/gAeAADyMQbP+0NtXwBK0aAWNGAAdQw/upAQV2kLrZuF0crC6UeBBCFQ/lQ4AAAAAAAAAA==",
   "IRIS-11": "25:AAAAAAAAD+w/hBLQQuqroXSF0Lqy6EE5BD+q/gAdAABmqoUqLwHcfUCrSmAfv7AAQSg/jqwQWQQLo2oF0coC6R9hBK6Q/iEgAAAAAAAAAA==",
   "IRIS-12": "25:AAAAAAAAD+E/hBeQQulroXS10LpS6EF5BD+q/gAZAADzsQPliEK5PiEzUaA2blAASig/upgQUWkLrbuF0RrC6aeBBDVQ/lQ4AAAAAAAAAA==",
+  "REW-1": "25:AAAAAAAAD+a/hBUQQujroXQV0Lpy6EFdBD+q/gAZAADzMQSJO8DpZsD44RD+6DgAXhQ/qRgQXKkLqtuF0orC6PeBBDFQ/go4AAAAAAAAAA==",
+  "REW-2": "25:AAAAAAAAD+y/hBSQQuiroXW10LrK6EFxBD+q/gAMAAEmnYbqIMD6AeDAuFDH9oAAdMA/jtgQQbsLovuF17PC6JohBOVQ/hbgAAAAAAAAAA==",
+  "REW-3": "25:AAAAAAAAD+U/hBCQQutroXX10LoS6EERBD+q/gAKAAG1hgHK7UC71GDw/zCKl8gAQBQ/rAAQRAQLrS6F1SwC6B9hBCag/newAAAAAAAAAA==",
+  "REW-4": "25:AAAAAAAAD+0/hBEQQupLoXRl0Lr66EElBD+q/gAfAABkKoMsLoLsPODIjuDL8dgAWjA/gaQQXAQLpeoF0soC6DdhBO6Q/k0gAAAAAAAAAA==",
   "IRIS-13": "25:AAAAAAAAD+G/hBMQQujroXTV0Lq66EE1BD+q/gAeAAM9aAYHE8L54CBLxwCmixAAdCA/q0QQS7ULo9yF1u+C61wBBMJA/hCQAAAAAAAAAA==",
   "IRIS-15": "25:AAAAAAAAD+W/hBfQQunLoXS10Lpq6EFdBD+q/gAaAADxMQJja0Lex2H4mXC6lCAATSw/uJAQX6kLqtuF0mrC6WeBBF1Q/nA4AAAAAAAAAA==",
   "IRIS-16": "25:AAAAAAAAD+0/hBMQQukroXU10Lpa6EE1BD+q/gAKAALrRIVBQ4KLOsH57LBqyKgATKw/k0YQX7sLrhKF07GC61IhBBRw/haoAAAAAAAAAA==",
   "IRIS-17": "25:AAAAAAAAD+w/hBPQQuvroXTF0Lr66EE5BD+q/gARAABlqodGTwKIreALJrC/x4AAXAg/gqAQXIQLoioF0doC6MdhBGKQ/nEgAAAAAAAAAA==",
-  "IRIS-18": "25:AAAAAAAAD++/hBBQQusLoXSV0Lqy6EERBD+q/gAYAABgqoesPcHMrWCjKiDWSegAYyg/iqgQVMQLpGoF0WoC6f9hBCqQ/lUgAAAAAAAAAA==",
-  "REW-1": "25:AAAAAAAAD+a/hBUQQujroXQV0Lpy6EFdBD+q/gAZAADzMQSJO8DpZsD44RD+6DgAXhQ/qRgQXKkLqtuF0orC6PeBBDFQ/go4AAAAAAAAAA==",
-  "REW-2": "25:AAAAAAAAD+y/hBSQQuiroXW10LrK6EFxBD+q/gAMAAEmnYbqIMD6AeDAuFDH9oAAdMA/jtgQQbsLovuF17PC6JohBOVQ/hbgAAAAAAAAAA==",
-  "REW-3": "25:AAAAAAAAD+U/hBCQQutroXX10LoS6EERBD+q/gAKAAG1hgHK7UC71GDw/zCKl8gAQBQ/rAAQRAQLrS6F1SwC6B9hBCag/newAAAAAAAAAA==",
-  "REW-4": "25:AAAAAAAAD+0/hBEQQupLoXRl0Lr66EElBD+q/gAfAABkKoMsLoLsPODIjuDL8dgAWjA/gaQQXAQLpeoF0soC6DdhBO6Q/k0gAAAAAAAAAA=="
+  "IRIS-18": "25:AAAAAAAAD++/hBBQQusLoXSV0Lqy6EERBD+q/gAYAABgqoesPcHMrWCjKiDWSegAYyg/iqgQVMQLpGoF0WoC6f9hBCqQ/lUgAAAAAAAAAA=="
  },
  "pianeti": [
   {
@@ -1626,8 +1627,8 @@ window.DATI = {
    ]
   },
   {
-   "id": "IRIS-7",
-   "codice": "ZZAC",
+   "id": "IRIS-6",
+   "codice": "72PV",
    "rivela": [],
    "pianeta": "IRIS",
    "titolo": "Lush Creek · 1",
@@ -1641,8 +1642,8 @@ window.DATI = {
    ]
   },
   {
-   "id": "IRIS-8",
-   "codice": "ZNRG",
+   "id": "IRIS-7",
+   "codice": "ZZAC",
    "rivela": [],
    "pianeta": "IRIS",
    "titolo": "Orbital Tower · 1",
@@ -1656,8 +1657,8 @@ window.DATI = {
    ]
   },
   {
-   "id": "IRIS-9",
-   "codice": "205V",
+   "id": "IRIS-8",
+   "codice": "ZNRG",
    "rivela": [],
    "pianeta": "IRIS",
    "titolo": "Lush Creek · 1",
@@ -1704,8 +1705,8 @@ window.DATI = {
    ]
   },
   {
-   "id": "IRIS-10",
-   "codice": "4TBT",
+   "id": "IRIS-9",
+   "codice": "205V",
    "rivela": [],
    "pianeta": "IRIS",
    "titolo": "Orbital Tower · 1",
@@ -1719,9 +1720,9 @@ window.DATI = {
     {
      "t": "p",
      "w": "IRIS-H",
-     "c": "FNUACDLBLB",
-     "k": "10",
-     "come": "10 di IRIS-10 x 1ª parola"
+     "c": "EMTZBCIAIA",
+     "k": "9",
+     "come": "9 di IRIS-9 x 1ª parola"
     },
     {
      "t": "c",
@@ -1752,13 +1753,13 @@ window.DATI = {
    ]
   },
   {
-   "id": "IRIS-11",
-   "codice": "VZKA",
+   "id": "IRIS-10",
+   "codice": "4TBT",
    "rivela": [
     "alfabeto"
    ],
    "pianeta": "IRIS",
-   "titolo": "Lezione delle due ruote",
+   "titolo": "IRIS-10",
    "tipo": "propedeutico",
    "cita": false,
    "corpo": [
@@ -1769,10 +1770,27 @@ window.DATI = {
    ]
   },
   {
+   "id": "IRIS-11",
+   "codice": "VZKA",
+   "rivela": [
+    "ordine"
+   ],
+   "pianeta": "IRIS",
+   "titolo": "Lezione delle due ruote",
+   "tipo": "propedeutico",
+   "cita": false,
+   "corpo": [
+    {
+     "t": "c",
+     "v": "Agilio: Fai come ti dico. Scrivi la parola in tre colonne, una lettera per casella, da\nsinistra a destra, e quando arrivi al bordo vai a capo e riparti da sinistra.\nFreirin: Fatto. E adesso?\nAgilio: Adesso non leggere come hai scritto. Leggi la prima colonna dall'alto in basso,\ntutta; poi la seconda, tutta; poi la terza. Quello che esce è il messaggio.\nFreirin: ...esce una parola che non esiste.\nAgilio: Esatto. E chi la trova deve rifare le tre colonne per sapere cosa c'era scritto.\nSe l'ultima riga rimane incompleta non importa: le colonne corte restano corte.\nFreirin: Sei insopportabile.\nAgilio: Sono prudente. Dillo con me, che poi me lo dimentico: TRE COLONNE SI SCENDE."
+    }
+   ]
+  },
+  {
    "id": "IRIS-12",
    "codice": "EZQD",
    "rivela": [
-    "ordine"
+    "chiave"
    ],
    "pianeta": "IRIS",
    "titolo": "Agilio e le tre colonne",
@@ -1781,7 +1799,78 @@ window.DATI = {
    "corpo": [
     {
      "t": "c",
-     "v": "Agilio: Fai come ti dico. Scrivi la parola in tre colonne, una lettera per casella, da\nsinistra a destra, e quando arrivi al bordo vai a capo e riparti da sinistra.\nFreirin: Fatto. E adesso?\nAgilio: Adesso non leggere come hai scritto. Leggi la prima colonna dall'alto in basso,\ntutta; poi la seconda, tutta; poi la terza. Quello che esce è il messaggio.\nFreirin: ...esce una parola che non esiste.\nAgilio: Esatto. E chi la trova deve rifare le tre colonne per sapere cosa c'era scritto.\nSe l'ultima riga rimane incompleta non importa: le colonne corte restano corte.\nFreirin: Sei insopportabile.\nAgilio: Sono prudente. Dillo con me, che poi me lo dimentico: TRE COLONNE SI SCENDE."
+     "v": "Sando: L'ultima cosa, e poi vi lascio andare al "
+    },
+    {
+     "t": "p",
+     "w": "IRIS-B",
+     "c": "CHSOA",
+     "k": "17-1-12-4-13",
+     "come": "la prima parola del reperto: SANDO"
+    },
+    {
+     "t": "c",
+     "v": ".\nLa chiave non si nasconde e non si manda a cercare: è già davanti a chi legge. È la prima\nparola in chiaro del reperto, la prima che si riesce a leggere senza fatica, partendo\ndall'inizio. Quella dà i passi: ogni sua lettera, contata nell'alfabeto kindler, dice di\nquanto girare l'anello. Si usano le sue lettere una dopo l'altra, nell'ordine, e quando\nfiniscono si ricomincia dalla prima.\nKlogg: E se nella prima parola c'è una lettera che l'alfabeto non ha?\nSando: Non ce l'ha, quindi non conta: la salti e passi alla prossima.\nAgilio: Dunque chi ha scritto il reperto ci ha lasciato la chiave sotto gli occhi.\nSando: Chi vuole essere letto lascia sempre la chiave sotto gli occhi, Agilio."
+    }
+   ]
+  },
+  {
+   "id": "REW-1",
+   "codice": "6MKT",
+   "rivela": [],
+   "pianeta": "FIN",
+   "titolo": "Entrance · 1",
+   "tipo": "lore",
+   "cita": false,
+   "corpo": [
+    {
+     "t": "c",
+     "v": "Benvenuti pellegrini, qui ricordiamo quello che fu, non celando niente.\nEntrando qui, ben saprete, avete sacrificato anni della vostra vita, \nè il prezzo che dobbiamo pagare per la nostra scelleratezza."
+    }
+   ]
+  },
+  {
+   "id": "REW-2",
+   "codice": "3BG2",
+   "rivela": [],
+   "pianeta": "FIN",
+   "titolo": "Over the connecting dock room · 1",
+   "tipo": "lore",
+   "cita": false,
+   "corpo": [
+    {
+     "t": "c",
+     "v": "Il nostro bellissimo sistema solare, con cui avremmo dovuto vivere in armonia e sincronia,\nun sogno divenuto tragedia, che ci ha visti nascere e ci vedrà estinti un giorno."
+    }
+   ]
+  },
+  {
+   "id": "REW-3",
+   "codice": "V1B2",
+   "rivela": [],
+   "pianeta": "FIN",
+   "titolo": "Control Room · 1",
+   "tipo": "lore",
+   "cita": false,
+   "corpo": [
+    {
+     "t": "c",
+     "v": "Qui ha fine il tuo viaggio, che la consapevolezza guidi le tue scelte future.\n\"Vola ramoscello, noi ci supportiamo, nella spensieratezza dell'amicizia noi non scompariamo!\""
+    }
+   ]
+  },
+  {
+   "id": "REW-4",
+   "codice": "NKZC",
+   "rivela": [],
+   "pianeta": "FIN",
+   "titolo": "Control Room · 1",
+   "tipo": "lore",
+   "cita": false,
+   "corpo": [
+    {
+     "t": "c",
+     "v": "Per avviare il Rewinder sono necessarie le tre parole che più hanno inciso sulla nostra storia. \nSolo così sarai legittimato."
     }
    ]
   },
@@ -1809,7 +1898,7 @@ window.DATI = {
     },
     {
      "t": "c",
-     "v": ".\nLa chiave non si nasconde e non si manda a cercare: è già davanti a chi legge. È la prima\nparola in chiaro del reperto, la prima che si riesce a leggere senza fatica, partendo\ndall'inizio. Quella dà i passi: ogni sua lettera, contata nell'alfabeto kindler, dice di\nquanto girare l'anello. Si usano le sue lettere una dopo l'altra, nell'ordine, e quando\nfiniscono si ricomincia dalla prima.\nKlogg: E se nella prima parola c'è una lettera che l'alfabeto non ha?\nSando: Non ce l'ha, quindi non conta: la salti e passi alla prossima.\nAgilio: Dunque chi ha scritto il reperto ci ha lasciato la chiave sotto gli occhi.\nSando: Chi vuole essere letto lascia sempre la chiave sotto gli occhi, Agilio."
+     "v": ".\nLa chiave non si nasconde e non si manda a cercare: e' gia' davanti a chi legge. E' la prima\nparola in chiaro del reperto, la prima che si riesce a leggere senza fatica, partendo\ndall'inizio. Quella da' i passi: ogni sua lettera, contata nell'alfabeto kindler, dice di\nquanto girare l'anello. Si usano le sue lettere una dopo l'altra, nell'ordine, e quando\nfiniscono si ricomincia dalla prima.\nKlogg: E se nella prima parola c'e' una lettera che l'alfabeto non ha?\nSando: Non ce l'ha, quindi non conta: la salti e passi alla prossima.\nAgilio: Dunque chi ha scritto il reperto ci ha lasciato la chiave sotto gli occhi.\nSando: Chi vuole essere letto lascia sempre la chiave sotto gli occhi, Agilio."
     }
    ]
   },
@@ -1958,66 +2047,6 @@ window.DATI = {
     {
      "t": "c",
      "v": " dei grandi: giocare a non\nsentirsi."
-    }
-   ]
-  },
-  {
-   "id": "REW-1",
-   "codice": "6MKT",
-   "rivela": [],
-   "pianeta": "FIN",
-   "titolo": "Entrance · 1",
-   "tipo": "lore",
-   "cita": false,
-   "corpo": [
-    {
-     "t": "c",
-     "v": "Benvenuti pellegrini, qui ricordiamo quello che fu, non celando niente.\nEntrando qui, ben saprete, avete sacrificato anni della vostra vita, \nè il prezzo che dobbiamo pagare per la nostra scelleratezza."
-    }
-   ]
-  },
-  {
-   "id": "REW-2",
-   "codice": "3BG2",
-   "rivela": [],
-   "pianeta": "FIN",
-   "titolo": "Over the connecting dock room · 1",
-   "tipo": "lore",
-   "cita": false,
-   "corpo": [
-    {
-     "t": "c",
-     "v": "Il nostro bellissimo sistema solare, con cui avremmo dovuto vivere in armonia e sincronia,\nun sogno divenuto tragedia, che ci ha visti nascere e ci vedrà estinti un giorno."
-    }
-   ]
-  },
-  {
-   "id": "REW-3",
-   "codice": "V1B2",
-   "rivela": [],
-   "pianeta": "FIN",
-   "titolo": "Control Room · 1",
-   "tipo": "lore",
-   "cita": false,
-   "corpo": [
-    {
-     "t": "c",
-     "v": "Qui ha fine il tuo viaggio, che la consapevolezza guidi le tue scelte future.\n\"Vola ramoscello, noi ci supportiamo, nella spensieratezza dell'amicizia noi non scompariamo!\""
-    }
-   ]
-  },
-  {
-   "id": "REW-4",
-   "codice": "NKZC",
-   "rivela": [],
-   "pianeta": "FIN",
-   "titolo": "Control Room · 1",
-   "tipo": "lore",
-   "cita": false,
-   "corpo": [
-    {
-     "t": "c",
-     "v": "Per avviare il Rewinder sono necessarie le tre parole che più hanno inciso sulla nostra storia. \nSolo così sarai legittimato."
     }
    ]
   }
